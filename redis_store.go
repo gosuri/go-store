@@ -1,11 +1,15 @@
 package store
 
 import (
+	"errors"
+	"fmt"
 	"os"
+	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
-	//"code.google.com/p/go-uuid/uuid"
+	"code.google.com/p/go-uuid/uuid"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -30,7 +34,57 @@ func (*RedisStore) Read(i Item) error {
 	return nil
 }
 
-func (*RedisStore) Write(i Item) error {
+type RedisItem struct {
+	prefix string
+	key    string
+	data   map[string]interface{}
+}
+
+func (s *RedisStore) Write(i Item) error {
+	c := s.pool.Get()
+	defer c.Close()
+
+	ri := &RedisItem{data: make(map[string]interface{})}
+	//ri := &RedisItem{}
+	if len(i.Key()) == 0 {
+		ri.key = uuid.New()
+	}
+	if err := marshall(i, ri); err != nil {
+		return err
+	}
+
+	for key, val := range ri.data {
+		if err := c.Send("HSET", ri.key, key, val); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func marshall(item Item, rItem *RedisItem) error {
+	s := reflect.ValueOf(item).Elem()
+	for i := 0; i < s.NumField(); i++ {
+		// key for data map
+		k := s.Type().Field(i).Name
+		field := s.Field(i)
+		switch field.Kind() {
+		case reflect.String:
+			rItem.data[k] = field.String()
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			rItem.data[k] = strconv.FormatInt(field.Int(), 10)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			rItem.data[k] = field.Uint()
+		case reflect.Bool:
+			if field.Bool() {
+				rItem.data[k] = "1"
+			} else {
+				rItem.data[k] = "0"
+			}
+		default:
+			return errors.New("store: cannot convert")
+		}
+	}
+	fmt.Println(rItem)
 	return nil
 }
 

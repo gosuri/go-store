@@ -16,10 +16,10 @@ func (p *Person) Key() string {
 }
 
 func main() {
-	s := store.NewRedisStore()
+	db := store.NewRedisStore()
 	bob := &Person{Name: "Bob"}
 
 	// saves to redis with a generate id
-	s.Write(bob)
+	db.Write(bob)
 }
 ```

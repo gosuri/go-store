@@ -22,7 +22,7 @@ func Read(i Item) {
 func Write(i Item) {
 }
 
-func ReadMultiple(items []Item) {
+func ReadMultiple(items []Item, key string) {
 }
 
 func WriteMultiple(items []Item) {
@@ -30,6 +30,7 @@ func WriteMultiple(items []Item) {
 
 type Item interface {
 	Key() string
+	SetKey(string)
 }
 
 type Writer interface {
@@ -45,7 +46,12 @@ type ReadWriter interface {
 	Writer
 }
 
+type Lister interface {
+	ListAll() error
+}
+
 type MultiReader interface {
+	ReadAll(items []Item)
 	ReadMultiple(items []Item)
 }
 
@@ -56,10 +62,6 @@ type MultiWriter interface {
 type MultiReadWriter interface {
 	MultiReader
 	MultiWriter
-}
-
-type RedisItem struct {
-	data map[string][]byte
 }
 
 func (i *RedisItem) Save() error {

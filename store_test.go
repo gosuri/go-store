@@ -4,18 +4,22 @@ import (
 	"testing"
 )
 
-type TestStruct struct {
+type TestItem struct {
 	key   string
 	Field string
 }
 
-func (s *TestStruct) Key() string {
-	return s.key
+func (i *TestItem) Key() string {
+	return i.key
+}
+
+func (i *TestItem) SetKey(key string) {
+	i.key = key
 }
 
 func TestExample(t *testing.T) {
-	i := &TestStruct{}
-	s := NewRedisStore()
-	s.Write(i)
-	s.Read(i)
+	// i := &TestStruct{}
+	// s := NewRedisStore()
+	// s.Write(i)
+	// s.Read(i)
 }

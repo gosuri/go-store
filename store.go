@@ -11,6 +11,7 @@ var (
 
 type Store interface {
 	ReadWriter
+	Lister
 	//MultiReadWriter
 }
 
@@ -33,6 +34,8 @@ type Item interface {
 	SetKey(string)
 }
 
+type Items []Item
+
 type Writer interface {
 	Write(Item) error
 }
@@ -47,7 +50,7 @@ type ReadWriter interface {
 }
 
 type Lister interface {
-	ListAll() error
+	List([]interface{}) error
 }
 
 type MultiReader interface {

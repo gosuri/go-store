@@ -90,3 +90,17 @@ func TestReadNotFound(t *testing.T) {
 		t.Fatalf("expected ErrNotFound, got: ", err)
 	}
 }
+
+func TestList(t *testing.T) {
+	db := NewRedisStore()
+	i1 := RedisTestStruct{Field: "field1"}
+	i2 := RedisTestStruct{Field: "field2"}
+	items := []RedisTestStruct{i1, i2}
+	for _, item := range items {
+		db.Write(&item)
+	}
+	got := []RedisTestStruct{}
+	if err := db.List(got); err != nil {
+		t.Fatalf("err", err)
+	}
+}

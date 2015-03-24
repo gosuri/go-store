@@ -14,28 +14,47 @@ import (
 )
 
 var (
+	// The environment variable to lookup redis connection url with
+	// the format redis://:password@hostname:port/db_number
 	DefaultRedisUrlEnv = "REDIS_URL"
 )
 
-type RedisStore struct {
-	pool *redis.Pool
-}
-
-type RedisConfig struct {
-	Host, Port, User, Pass string
-	Db                     int
-}
-
+// RedisItem represent the data structure
+// used to store values in redis
 type RedisItem struct {
 	prefix string
 	key    string
 	data   map[string]interface{}
 }
 
+// Key returns the redis key used to
+// store a redis item
+func (i *RedisItem) Key() string {
+	return i.prefix + ":" + i.key
+}
+
+// RedisConfig stores the configuration values used for
+// establishing a connection with Redis server
+type RedisConfig struct {
+	Host, Port, User, Pass string
+	Db                     int
+}
+
+// RedisStore represents the Store Implmention for Redis
+type RedisStore struct {
+	pool *redis.Pool
+}
+
+// NewRedisStore returns a RedisStore with
+// default configuration values
 func NewRedisStore() Store {
 	return &RedisStore{pool: NewRedisPool(NewRedisConfig())}
 }
 
+// Read reads the item from redis store and copies the values to item
+// It Returns ErrKeyNotFound when no values are found for the key provided
+// and ErrKeyMissing when key is not provided. Unmarshalling id done using
+// driver provided redis.ScanStruct
 func (s *RedisStore) Read(i Item) error {
 	c := s.pool.Get()
 	defer c.Close()
@@ -61,10 +80,9 @@ func (s *RedisStore) Read(i Item) error {
 	return nil
 }
 
-func (i *RedisItem) Key() string {
-	return i.prefix + ":" + i.key
-}
-
+// Write writes the item to the store. It constructs the key using the i.Key()
+// and prefixes it with the type of struct. When the key is empty, it assigns
+// a unique universal id(UUID) using the SetKey method of the Item
 func (s *RedisStore) Write(i Item) error {
 	c := s.pool.Get()
 	defer c.Close()
@@ -96,6 +114,10 @@ func (s *RedisStore) Write(i Item) error {
 		c.Flush()
 	}
 
+	return nil
+}
+
+func (s *RedisStore) List(items []interface{}) error {
 	return nil
 }
 

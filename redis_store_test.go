@@ -63,3 +63,30 @@ func TestWrite(t *testing.T) {
 		t.Fatalf("expected:", s, " got:", got)
 	}
 }
+
+func TestRead(t *testing.T) {
+	s := &RedisTestStruct{
+		Id:    uuid.New(),
+		Field: "value",
+	}
+	db := NewRedisStore()
+
+	if err := db.Write(s); err != nil {
+		t.Fatalf("err", err)
+	}
+	got := &RedisTestStruct{Id: s.Key()}
+	if err := db.Read(got); err != nil {
+		t.Fatalf("err", err)
+	}
+	if !reflect.DeepEqual(s, got) {
+		t.Fatalf("expected:", s, " got:", got)
+	}
+}
+
+func TestReadNotFound(t *testing.T) {
+	db := NewRedisStore()
+	got := &RedisTestStruct{Id: "invalid"}
+	if err := db.Read(got); err != ErrKeyNotFound {
+		t.Fatalf("expected ErrNotFound, got: ", err)
+	}
+}

@@ -26,18 +26,39 @@ type RedisConfig struct {
 	Db                     int
 }
 
-func NewRedisStore() Store {
-	return &RedisStore{pool: NewRedisPool(NewRedisConfig())}
-}
-
-func (*RedisStore) Read(i Item) error {
-	return nil
-}
-
 type RedisItem struct {
 	prefix string
 	key    string
 	data   map[string]interface{}
+}
+
+func NewRedisStore() Store {
+	return &RedisStore{pool: NewRedisPool(NewRedisConfig())}
+}
+
+func (s *RedisStore) Read(i Item) error {
+	c := s.pool.Get()
+	defer c.Close()
+
+	value := reflect.ValueOf(i).Elem()
+	if len(i.Key()) == 0 {
+		return ErrEmptyKey
+	}
+	ri := &RedisItem{
+		key:    i.Key(),
+		prefix: value.Type().Name(),
+	}
+	reply, err := redis.Values(c.Do("HGETALL", ri.Key()))
+	if err != nil {
+		return err
+	}
+	if len(reply) == 0 {
+		return ErrKeyNotFound
+	}
+	if err := redis.ScanStruct(reply, i); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (i *RedisItem) Key() string {
@@ -48,7 +69,12 @@ func (s *RedisStore) Write(i Item) error {
 	c := s.pool.Get()
 	defer c.Close()
 
-	ri := &RedisItem{data: make(map[string]interface{})}
+	value := reflect.ValueOf(i).Elem()
+
+	ri := &RedisItem{
+		prefix: value.Type().Name(),
+		data:   make(map[string]interface{}),
+	}
 
 	// Use the Items id if set or generate
 	// a new UUID
@@ -59,7 +85,7 @@ func (s *RedisStore) Write(i Item) error {
 	i.SetKey(ri.key)
 
 	// convert the item to redis item
-	if err := marshall(i, ri); err != nil {
+	if err := marshall(i, value, ri); err != nil {
 		return err
 	}
 
@@ -73,37 +99,9 @@ func (s *RedisStore) Write(i Item) error {
 	return nil
 }
 
-// Move this to use the driver conversion
-// redis.ConverAssignBytes
-func marshall(item Item, rItem *RedisItem) error {
-	s := reflect.ValueOf(item).Elem()
-	rItem.prefix = s.Type().Name()
-	for i := 0; i < s.NumField(); i++ {
-		// key for data map
-		k := s.Type().Field(i).Name
-		field := s.Field(i)
-		switch field.Kind() {
-		case reflect.String:
-			rItem.data[k] = field.String()
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			rItem.data[k] = strconv.FormatInt(field.Int(), 10)
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			rItem.data[k] = field.Uint()
-		case reflect.Float32, reflect.Float64:
-			rItem.data[k] = field.Float()
-		case reflect.Bool:
-			if field.Bool() {
-				rItem.data[k] = "1"
-			} else {
-				rItem.data[k] = "0"
-			}
-		default:
-			return errors.New(fmt.Sprintf("store: cannot convert %s - type: %s%", k, field.Kind()))
-		}
-	}
-	return nil
-}
-
+// NewRedisConfig returns a default redis config. It uses the environment
+// variable $REDIS_URL with the format redis://:password@hostname:port/db_number
+// when present or defaults to 127.0.0.1:6379
 func NewRedisConfig() *RedisConfig {
 	// Use local Redis instance by default
 	c := &RedisConfig{
@@ -132,7 +130,7 @@ func NewRedisConfig() *RedisConfig {
 	return c
 }
 
-// TODO: Implement auth
+// NewRedisPool returns a default redis pool with default configuration
 func NewRedisPool(config *RedisConfig) *redis.Pool {
 	return &redis.Pool{
 		MaxIdle:     3,
@@ -161,4 +159,34 @@ func NewRedisPool(config *RedisConfig) *redis.Pool {
 			return err
 		},
 	}
+}
+
+// Copies the Item to RedisItem and converts the
+// struct field types to driver supported types
+func marshall(item Item, value reflect.Value, rItem *RedisItem) error {
+	// Ideally use the driver default marshalling redis.ConverAssignBytes
+	for i := 0; i < value.NumField(); i++ {
+		// key for data map
+		k := value.Type().Field(i).Name
+		field := value.Field(i)
+		switch field.Kind() {
+		case reflect.String:
+			rItem.data[k] = field.String()
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			rItem.data[k] = strconv.FormatInt(field.Int(), 10)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			rItem.data[k] = field.Uint()
+		case reflect.Float32, reflect.Float64:
+			rItem.data[k] = field.Float()
+		case reflect.Bool:
+			if field.Bool() {
+				rItem.data[k] = "1"
+			} else {
+				rItem.data[k] = "0"
+			}
+		default:
+			return errors.New(fmt.Sprintf("store: cannot convert %s - type: %s", k, field.Kind()))
+		}
+	}
+	return nil
 }

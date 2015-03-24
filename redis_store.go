@@ -40,29 +40,44 @@ type RedisItem struct {
 	data   map[string]interface{}
 }
 
+func (i *RedisItem) Key() string {
+	return i.prefix + ":" + i.key
+}
+
 func (s *RedisStore) Write(i Item) error {
 	c := s.pool.Get()
 	defer c.Close()
 
 	ri := &RedisItem{data: make(map[string]interface{})}
-	//ri := &RedisItem{}
-	if len(i.Key()) == 0 {
+
+	// Use the Items id if set or generate
+	// a new UUID
+	ri.key = i.Key()
+	if len(ri.key) == 0 {
 		ri.key = uuid.New()
 	}
+	i.SetKey(ri.key)
+
+	// convert the item to redis item
 	if err := marshall(i, ri); err != nil {
 		return err
 	}
 
 	for key, val := range ri.data {
-		if err := c.Send("HSET", ri.key, key, val); err != nil {
+		if err := c.Send("HSET", ri.Key(), key, val); err != nil {
 			return err
 		}
+		c.Flush()
 	}
+
 	return nil
 }
 
+// Move this to use the driver conversion
+// redis.ConverAssignBytes
 func marshall(item Item, rItem *RedisItem) error {
 	s := reflect.ValueOf(item).Elem()
+	rItem.prefix = s.Type().Name()
 	for i := 0; i < s.NumField(); i++ {
 		// key for data map
 		k := s.Type().Field(i).Name
@@ -74,6 +89,8 @@ func marshall(item Item, rItem *RedisItem) error {
 			rItem.data[k] = strconv.FormatInt(field.Int(), 10)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			rItem.data[k] = field.Uint()
+		case reflect.Float32, reflect.Float64:
+			rItem.data[k] = field.Float()
 		case reflect.Bool:
 			if field.Bool() {
 				rItem.data[k] = "1"
@@ -81,10 +98,9 @@ func marshall(item Item, rItem *RedisItem) error {
 				rItem.data[k] = "0"
 			}
 		default:
-			return errors.New("store: cannot convert")
+			return errors.New(fmt.Sprintf("store: cannot convert %s - type: %s%", k, field.Kind()))
 		}
 	}
-	fmt.Println(rItem)
 	return nil
 }
 

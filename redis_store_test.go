@@ -8,7 +8,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
-type RedisTestStruct struct {
+type TestR struct {
 	Id         string
 	Field      string
 	FieldFloat float32
@@ -17,16 +17,18 @@ type RedisTestStruct struct {
 	FieldUint  uint
 }
 
-func (s *RedisTestStruct) Key() string {
+type TestRs []TestR
+
+func (s *TestR) Key() string {
 	return s.Id
 }
 
-func (s *RedisTestStruct) SetKey(k string) {
+func (s *TestR) SetKey(k string) {
 	s.Id = k
 }
 
 func TestWrite(t *testing.T) {
-	s := &RedisTestStruct{
+	s := &TestR{
 		Id:         uuid.New(),
 		Field:      "value",
 		FieldInt:   10,
@@ -48,12 +50,12 @@ func TestWrite(t *testing.T) {
 	pool := NewRedisPool(NewRedisConfig())
 	c := pool.Get()
 	defer c.Close()
-	reply, err := redis.Values(c.Do("HGETALL", "RedisTestStruct:"+s.Key()))
+	reply, err := redis.Values(c.Do("HGETALL", "TestR:"+s.Key()))
 	if err != nil {
 		t.Fatalf("err", err)
 	}
 
-	got := &RedisTestStruct{}
+	got := &TestR{}
 
 	if err := redis.ScanStruct(reply, got); err != nil {
 		t.Fatalf("err", err)
@@ -65,7 +67,7 @@ func TestWrite(t *testing.T) {
 }
 
 func TestRead(t *testing.T) {
-	s := &RedisTestStruct{
+	s := &TestR{
 		Id:    uuid.New(),
 		Field: "value",
 	}
@@ -74,7 +76,7 @@ func TestRead(t *testing.T) {
 	if err := db.Write(s); err != nil {
 		t.Fatalf("err", err)
 	}
-	got := &RedisTestStruct{Id: s.Key()}
+	got := &TestR{Id: s.Key()}
 	if err := db.Read(got); err != nil {
 		t.Fatalf("err", err)
 	}
@@ -85,7 +87,7 @@ func TestRead(t *testing.T) {
 
 func TestReadNotFound(t *testing.T) {
 	db := NewRedisStore()
-	got := &RedisTestStruct{Id: "invalid"}
+	got := &TestR{Id: "invalid"}
 	if err := db.Read(got); err != ErrKeyNotFound {
 		t.Fatalf("expected ErrNotFound, got: ", err)
 	}
@@ -93,17 +95,34 @@ func TestReadNotFound(t *testing.T) {
 
 func TestList(t *testing.T) {
 	db := NewRedisStore()
-	i1 := RedisTestStruct{Field: "field1"}
-	i2 := RedisTestStruct{Field: "field2"}
-	items := []RedisTestStruct{i1, i2}
-	for _, item := range items {
-		db.Write(&item)
-	}
-	got := []RedisTestStruct{}
+	i1 := TestR{Field: "field1"}
+	db.Write(&i1)
+	i2 := TestR{Field: "field2"}
+	db.Write(&i2)
+
+	got := []TestR{}
 	if err := db.List(&got); err != nil {
 		t.Fatalf("err", err)
 	}
+
+	items := []TestR{i1, i2}
 	if len(got) < 1 {
 		t.Fatalf("expected %d, got: %d", len(items), len(got))
+	}
+}
+
+func TestReadMultpile(t *testing.T) {
+	db := NewRedisStore()
+	i := TestR{Field: "field1"}
+	db.Write(&i)
+	items := TestRs{i}
+
+	got := TestRs{{Id: i.Key()}}
+	if err := db.ReadMultiple(got); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(got, items) {
+		t.Fatalf("expected %#v, got %#v", items, got)
 	}
 }

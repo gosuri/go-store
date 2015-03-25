@@ -12,29 +12,13 @@ var (
 type Store interface {
 	ReadWriter
 	Lister
-	//MultiReadWriter
-}
-
-var DefaultStore = NewRedisStore()
-
-func Read(i Item) {
-}
-
-func Write(i Item) {
-}
-
-func ReadMultiple(items []Item, key string) {
-}
-
-func WriteMultiple(items []Item) {
+	MultiReadWriter
 }
 
 type Item interface {
 	Key() string
 	SetKey(string)
 }
-
-type Items []Item
 
 type Writer interface {
 	Write(Item) error
@@ -54,12 +38,11 @@ type Lister interface {
 }
 
 type MultiReader interface {
-	ReadAll(items []Item)
-	ReadMultiple(items []Item)
+	ReadMultiple(interface{}) error
 }
 
 type MultiWriter interface {
-	WriteMultiple(items []Item)
+	WriteMultiple(items []Item) error
 }
 
 type MultiReadWriter interface {
@@ -67,6 +50,6 @@ type MultiReadWriter interface {
 	MultiWriter
 }
 
-func (i *RedisItem) Save() error {
-	return nil
+type Items interface {
+	Item
 }

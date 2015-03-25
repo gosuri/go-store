@@ -146,6 +146,53 @@ func (s *RedisStore) Read(i Item) error {
 	return nil
 }
 
+func (s *RedisStore) ReadMultiple(i interface{}) error {
+	v := reflect.ValueOf(i)
+
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Slice {
+		return errors.New("store: value must be a a slice")
+	}
+
+	c := s.pool.Get()
+	defer c.Close()
+
+	var key string
+	var err error
+	prefix := s.typeName(v) + ":"
+
+	for y := 0; y < v.Len(); y++ {
+		if key = v.Index(y).Addr().MethodByName("Key").Call(nil)[0].String(); len(key) == 0 {
+			return ErrEmptyKey
+		}
+		if err = c.Send("HGETALL", prefix+key); err != nil {
+			return err
+		}
+	}
+	if err = c.Flush(); err != nil {
+		return err
+	}
+	reply, err := redis.Values(c.Receive())
+	if err != nil {
+		return err
+	}
+
+	for y := 0; y < v.Len(); y++ {
+		itemPtrV := reflect.New(v.Type().Elem())
+		redis.ScanStruct(reply, itemPtrV.Interface())
+		v.Index(y).Set(itemPtrV.Elem())
+	}
+
+	return nil
+}
+
+func (s *RedisStore) WriteMultiple(i []Item) error {
+	return nil
+}
+
 // Write writes the item to the store. It constructs the key using the i.Key()
 // and prefixes it with the type of struct. When the key is empty, it assigns
 // a unique universal id(UUID) using the SetKey method of the Item
@@ -186,27 +233,31 @@ func (s *RedisStore) Write(i Item) error {
 // List populates the slice with ids of the slice element type
 func (s *RedisStore) List(i interface{}) error {
 	v := reflect.ValueOf(i)
-	if v.Kind() != reflect.Ptr && v.Elem().Kind() != reflect.Slice {
-		return errors.New("store: value must be a pointer to a slice")
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Slice {
+		return errors.New("store: value must be a a slice")
 	}
 
 	c := s.pool.Get()
 	defer c.Close()
 
-	typeName := s.typeName(v.Elem())
+	typeName := s.typeName(v)
 	reply, err := redis.Values(c.Do("SCAN", "0", "MATCH", typeName+":*", "COUNT", MAX_ITEMS))
 	if err != nil {
 		return err
 	}
 
 	keys, _ := redis.Strings(reply[1], nil)
-	ensureSliceLen(v.Elem(), len(keys))
+	ensureSliceLen(v, len(keys))
 	for index, key := range keys {
 		// Remove the type of item from the key and just return the id
 		id := strings.TrimPrefix(key, typeName+":")
 		// value representing a pointer to a new zero value for the slice
 		// element type. Basically, initialize a new item struct
-		itemPtrV := reflect.New(v.Type().Elem().Elem())
+		itemPtrV := reflect.New(v.Type().Elem())
 
 		// function value corresponding to the SetKey function of the Struct
 		setKeyFuncV := itemPtrV.MethodByName("SetKey")
@@ -216,7 +267,7 @@ func (s *RedisStore) List(i interface{}) error {
 
 		// call the SetKey function on the struct to store the key
 		setKeyFuncV.Call(setKeyFuncArgsV)
-		v.Elem().Index(index).Set(itemPtrV.Elem())
+		v.Index(index).Set(itemPtrV.Elem())
 	}
 	return nil
 }
@@ -230,7 +281,7 @@ func ensureSliceLen(d reflect.Value, n int) {
 	}
 }
 
-// Helper method to return the types name
+// Helper function to return the name of the type
 func (scope *RedisStore) typeName(value reflect.Value) string {
 	if value.Kind() == reflect.Slice {
 		return value.Type().Elem().Name()

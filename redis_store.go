@@ -171,21 +171,19 @@ func (s *RedisStore) ReadMultiple(i interface{}) error {
 		if err = c.Send("HGETALL", prefix+key); err != nil {
 			return err
 		}
-	}
-	if err = c.Flush(); err != nil {
-		return err
-	}
-	reply, err := redis.Values(c.Receive())
-	if err != nil {
-		return err
-	}
+		if err = c.Flush(); err != nil {
+			return err
+		}
+		reply, err := redis.Values(c.Receive())
+		if err != nil {
+			return err
+		}
 
-	for y := 0; y < v.Len(); y++ {
+		// Move out of the loop for pipelining
 		itemPtrV := reflect.New(v.Type().Elem())
 		redis.ScanStruct(reply, itemPtrV.Interface())
 		v.Index(y).Set(itemPtrV.Elem())
 	}
-
 	return nil
 }
 

@@ -23,7 +23,10 @@ func main() {
   db.Write(bob)
 
   // list ids, each person struct will have the Id populated
-  people := []Person{}
-  db.List(&people)
+  var people []Person
+  db.List(people)
+ 
+  // Fetches all and stores in people
+  db.MultiRead(people)
 }
 ```

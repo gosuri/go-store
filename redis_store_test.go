@@ -115,14 +115,16 @@ func TestReadMultpile(t *testing.T) {
 	db := NewRedisStore()
 	i := TestR{Field: "field1"}
 	db.Write(&i)
-	items := TestRs{i}
+	i2 := TestR{Field: "field1"}
+	db.Write(&i2)
+	items := TestRs{i, i2}
 
-	got := TestRs{{Id: i.Key()}}
+	got := TestRs{{Id: i.Key()}, {Id: i2.Key()}}
 	if err := db.ReadMultiple(got); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	if !reflect.DeepEqual(got, items) {
-		t.Fatalf("expected %#v, got %#v", items, got)
+		t.Fatalf("Mismatch\nexp: %#v \ngot: %#v", items, got)
 	}
 }

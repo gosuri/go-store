@@ -16,8 +16,8 @@ func (p *Person) Key() string {
 	return p.Id
 }
 
-func (p *Person) SetKey() string {
-	return p.Id
+func (p *Person) SetKey(k string) {
+	p.Id = k
 }
 
 func main() {

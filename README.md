@@ -6,12 +6,17 @@ TBD
 Example
 
 ```go
+// Implements store.Item interface methods Key and SetKey 
 type Person struct {
 	Id   string
 	Name string
 }
 
 func (p *Person) Key() string {
+	return p.Id
+}
+
+func (p *Person) SetKey() string {
 	return p.Id
 }
 

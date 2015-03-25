@@ -16,17 +16,17 @@ func (p *Person) Key() string {
 }
 
 func main() {
-  db := store.NewRedisStore()
-  bob := &Person{Name: "Bob"}
+	db := store.NewRedisStore()
+	bob := &Person{Name: "Bob"}
 
-  // saves to redis with a generate id
-  db.Write(bob)
+  	// saves to redis with a generated uuid
+	db.Write(bob)
 
-  // list ids, each person struct will have the Id populated
-  var people []Person
-  db.List(people)
+  	// Fetches all keys
+  	var people []Person
+  	db.List(people)
  
-  // Fetches all and stores in people
-  db.MultiRead(people)
+  	// Fetches all people
+  	db.MultiRead(people)
 }
 ```

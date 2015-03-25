@@ -50,7 +50,7 @@ type ReadWriter interface {
 }
 
 type Lister interface {
-	List([]interface{}) error
+	List(interface{}) error
 }
 
 type MultiReader interface {

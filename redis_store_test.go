@@ -100,7 +100,10 @@ func TestList(t *testing.T) {
 		db.Write(&item)
 	}
 	got := []RedisTestStruct{}
-	if err := db.List(got); err != nil {
+	if err := db.List(&got); err != nil {
 		t.Fatalf("err", err)
+	}
+	if len(got) < 1 {
+		t.Fatalf("expected %d, got: %d", len(items), len(got))
 	}
 }

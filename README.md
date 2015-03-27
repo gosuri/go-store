@@ -3,6 +3,8 @@ go-store
 
 A simple, and fast [Redis](http://redis.io) backed key-value store library for [Go](http://golang.org).
 
+[![GoDoc](https://godoc.org/github.com/gosuri/go-store?status.svg)](https://godoc.org/github.com/gosuri/go-store)
+
 **NOTE**: This library is currently under **active development** and not ready for production use.
 
 Example

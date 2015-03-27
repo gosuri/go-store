@@ -101,20 +101,24 @@ func TestReadNotFound(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
+	flushRedisDB()
 	db := NewRedisStore()
 	i1 := TestR{Field: "field1"}
 	db.Write(&i1)
 	i2 := TestR{Field: "field2"}
 	db.Write(&i2)
 
-	got := []TestR{}
+	var got []TestR
 	if err := db.List(&got); err != nil {
 		t.Fatalf("err", err)
 	}
 
-	items := []TestR{i1, i2}
-	if len(got) < 1 {
-		t.Fatalf("expected %d, got: %d", len(items), len(got))
+	if len(got) != 2 {
+		t.Fatalf("expected length to be 2, got: %d", len(got))
+	}
+
+	if e := got[0].Id; !(e == i1.Id || e == i2.Id) {
+		t.Fatalf("expected id to be %s or %s got: %s", i1.Id, i2.Id, e)
 	}
 }
 
@@ -133,5 +137,14 @@ func TestReadMultpile(t *testing.T) {
 
 	if !reflect.DeepEqual(got, items) {
 		t.Fatalf("Mismatch\nexp: %#v \ngot: %#v", items, got)
+	}
+}
+
+func flushRedisDB() {
+	pool := NewRedisPool(NewRedisConfig())
+	c := pool.Get()
+	defer c.Close()
+	if _, err := c.Do("FLUSHDB"); err != nil {
+		panic(err)
 	}
 }

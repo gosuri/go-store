@@ -1,48 +1,60 @@
 store
 =====
+**NOTE**: This library is currently under **active development** and not ready for production use.
 
-TBD
+A simple and fast [Redis](http://redis.io) backed key-value store library for [Go](http://golang.org).
 
-Examples
---------
+Example
+-------
 
-The below example store a person, lists ids and fetches the saved records
+The below example stores, lists and fetches the saved records
 
 ```go
-// Implements store.Item interface methods Key and SetKey 
-type Person struct {
-	Id   string
-	Name string
+import (
+  "fmt"
+
+  "github.com/gosuri/go-store"
+)
+
+// Hacker implements store.Item interface methods Key and SetKey
+type Hacker struct {
+  Id   string
+  Name string
 }
 
-func (p *Person) Key() string {
-	return p.Id
+func (h *Hacker) Key() string {
+  return h.Id
 }
 
-func (p *Person) SetKey(k string) {
-	p.Id = k
+func (h *Hacker) SetKey(k string) {
+  h.Id = k
 }
 
 func main() {
-	db := store.NewRedisStore()
-  bob := &Person{Name: "Bob"}
+  db := store.NewRedisStore()
 
-  // saves to redis with a generated uuid
-  db.Write(bob)
+  // Save a hacker in the store with a auto-generated uuid
+  db.Write(&Hacker{Name: "Alan Kay"})
 
-  // list ids, each person struct will have the Id populated
-  var people []Person
-  db.List(&people)
+  var hackers []Hacker
+  // Populate hackers slice with ids of all hackers in the store
+  db.List(&hackers)
 
-  // Fetches all people
-  db.MultiRead(people)
+  alan := hackers[0]
+  db.Read(&alan)
+  fmt.Println("Hello,", alan.Name)
+
+  fmt.Println("Listing all", len(hackers), "hackers")
+  // Fetches all hackers with names from the store
+  db.ReadMultiple(hackers)
+  for _, hacker := range hackers {
+    fmt.Printf("%s (%s)\n", hacker.Name, hacker.Id)
+  }
 }
 ```
 
-Testing
--------
-
-### Running tests
+Running Testing
+----------------
 
 ```
 $ go test

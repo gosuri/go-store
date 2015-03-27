@@ -66,6 +66,13 @@ func TestWrite(t *testing.T) {
 	}
 }
 
+func BenchmarkRedisWrite(b *testing.B) {
+	db := NewRedisStore()
+	for i := 0; i < b.N; i++ {
+		db.Write(&TestR{Field: "BenchmarkWrite"})
+	}
+}
+
 func TestRead(t *testing.T) {
 	s := &TestR{
 		Id:    uuid.New(),
@@ -117,9 +124,9 @@ func TestReadMultpile(t *testing.T) {
 	db.Write(&i)
 	i2 := TestR{Field: "field1"}
 	db.Write(&i2)
-	items := TestRs{i, i2}
+	items := []TestR{i, i2}
 
-	got := TestRs{{Id: i.Key()}, {Id: i2.Key()}}
+	got := []TestR{{Id: i.Key()}, {Id: i2.Key()}}
 	if err := db.ReadMultiple(got); err != nil {
 		t.Fatalf("err: %v", err)
 	}

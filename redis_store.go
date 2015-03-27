@@ -146,6 +146,8 @@ func (s *RedisStore) Read(i Item) error {
 	return nil
 }
 
+// ReadMultiple gets the values from redis
+// in a single call by pipelining
 func (s *RedisStore) ReadMultiple(i interface{}) error {
 	v := reflect.ValueOf(i)
 
@@ -164,31 +166,48 @@ func (s *RedisStore) ReadMultiple(i interface{}) error {
 	var err error
 	prefix := s.typeName(v) + ":"
 
+	// Using transactions to execute HGETALL in a pipeline.
+	// Mark the start of a transaction block.
+	// Subsequent commands will be queued for atomic execution.
+	c.Send("MULTI")
 	for y := 0; y < v.Len(); y++ {
 		if key = v.Index(y).Addr().MethodByName("Key").Call(nil)[0].String(); len(key) == 0 {
 			return ErrEmptyKey
 		}
+		// Send writes the command to the connection's output buffer.
 		if err = c.Send("HGETALL", prefix+key); err != nil {
 			return err
 		}
-		if err = c.Flush(); err != nil {
-			return err
-		}
-		reply, err := redis.Values(c.Receive())
-		if err != nil {
-			return err
-		}
+	}
+	// Flush flushes the connection's output buffer to the server
+	if err = c.Flush(); err != nil {
+		return err
+	}
+	// Execute all previously queued commands
+	// in a transaction and restores the connection
+	// state to normal
+	reply, err := c.Do("EXEC")
+	if err != nil {
+		return err
+	}
 
-		// Move out of the loop for pipelining
+	replyValue := reflect.ValueOf(reply)
+	var values []interface{}
+	// Reply is a two dimentional array of interfaces. Iterate over the first
+	// dimension and scan each slice into destination interface type
+	for y := 0; y < replyValue.Len(); y++ {
 		itemPtrV := reflect.New(v.Type().Elem())
-		redis.ScanStruct(reply, itemPtrV.Interface())
+		if values, err = redis.Values(replyValue.Index(y).Interface(), nil); err != nil {
+			return err
+		}
+		redis.ScanStruct(values, itemPtrV.Interface())
 		v.Index(y).Set(itemPtrV.Elem())
 	}
 	return nil
 }
 
 func (s *RedisStore) WriteMultiple(i []Item) error {
-	return nil
+	return errors.New("Implementation pending")
 }
 
 // Write writes the item to the store. It constructs the key using the i.Key()
@@ -243,6 +262,7 @@ func (s *RedisStore) List(i interface{}) error {
 	defer c.Close()
 
 	typeName := s.typeName(v)
+	// Ideally iterate over each page instead of limiting to MAX_ITEMS
 	reply, err := redis.Values(c.Do("SCAN", "0", "MATCH", typeName+":*", "COUNT", MAX_ITEMS))
 	if err != nil {
 		return err

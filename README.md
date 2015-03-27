@@ -1,8 +1,9 @@
-store
-=====
-**NOTE**: This library is currently under **active development** and not ready for production use.
+go-store
+========
 
-A simple and fast [Redis](http://redis.io) backed key-value store library for [Go](http://golang.org).
+A simple, and fast [Redis](http://redis.io) backed key-value store library for [Go](http://golang.org).
+
+**NOTE**: This library is currently under **active development** and not ready for production use.
 
 Example
 -------
@@ -10,6 +11,8 @@ Example
 The below example stores, lists and fetches the saved records
 
 ```go
+package main
+
 import (
   "fmt"
 
@@ -18,8 +21,9 @@ import (
 
 // Hacker implements store.Item interface methods Key and SetKey
 type Hacker struct {
-  Id   string
-  Name string
+  Id        string
+  Name      string
+  Birthyear int
 }
 
 func (h *Hacker) Key() string {
@@ -34,7 +38,7 @@ func main() {
   db := store.NewRedisStore()
 
   // Save a hacker in the store with a auto-generated uuid
-  db.Write(&Hacker{Name: "Alan Kay"})
+  db.Write(&Hacker{Name: "Alan Turing", Birthyear: 1912})
 
   var hackers []Hacker
   // Populate hackers slice with ids of all hackers in the store
@@ -48,7 +52,7 @@ func main() {
   // Fetches all hackers with names from the store
   db.ReadMultiple(hackers)
   for _, hacker := range hackers {
-    fmt.Printf("%s (%s)\n", hacker.Name, hacker.Id)
+    fmt.Printf("%s (%d) (%s)\n", hacker.Name, hacker.Birthyear, hacker.Id)
   }
 }
 ```

@@ -116,6 +116,8 @@ func benchmarkRead(n int, b *testing.B) {
 	}
 }
 
+func BenchmarkRead(b *testing.B) { benchmarkRead(1, b) }
+
 func BenchmarkRead1k(b *testing.B) { benchmarkRead(1000, b) }
 
 func TestList(t *testing.T) {

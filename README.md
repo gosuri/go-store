@@ -72,7 +72,10 @@ Benchmarks
 ```
 $ go test -bench=.
 ...
-PASS
-BenchmarkRedisWrite    10000      158512 ns/op
-ok    github.com/gosuri/store 1.612s
+BenchmarkRedisWrite     10000   178342 ns/op
+BenchmarkRead           10000   119449 ns/op
+BenchmarkRead1k         10   120388644 ns/op
+BenchmarkRedisList1k    50    33211769 ns/op
+BenchmarkRedisList10k   20    79867558 ns/op
+BenchmarkReadMultiple1k 200   10372213 ns/op
 ```

@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	MAX_ITEMS = 1000
+	// Max items to fetch per call from the store
+	MAX_ITEMS = 1024
 )
 
 var (

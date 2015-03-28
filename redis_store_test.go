@@ -100,27 +100,63 @@ func TestReadNotFound(t *testing.T) {
 	}
 }
 
+func benchmarkRead(n int, b *testing.B) {
+	db := NewRedisStore()
+	items := make([]TestR, n, n)
+	for i := 0; i < n; i++ {
+		item := TestR{Field: "..."}
+		db.Write(&item)
+		items[i] = item
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, item := range items {
+			db.Read(&item)
+		}
+	}
+}
+
+func BenchmarkRead1k(b *testing.B) { benchmarkRead(1000, b) }
+
 func TestList(t *testing.T) {
 	flushRedisDB()
 	db := NewRedisStore()
-	i1 := TestR{Field: "field1"}
-	db.Write(&i1)
-	i2 := TestR{Field: "field2"}
-	db.Write(&i2)
+	noItems := 1001
+
+	for i := 0; i < noItems; i++ {
+		db.Write(&TestR{Field: "..."})
+	}
 
 	var got []TestR
 	if err := db.List(&got); err != nil {
 		t.Fatalf("err", err)
 	}
 
-	if len(got) != 2 {
-		t.Fatalf("expected length to be 2, got: %d", len(got))
+	if len(got) != noItems {
+		t.Fatalf("expected length to be %d, got: %d", noItems, len(got))
 	}
 
-	if e := got[0].Id; !(e == i1.Id || e == i2.Id) {
-		t.Fatalf("expected id to be %s or %s got: %s", i1.Id, i2.Id, e)
+	for _, item := range got {
+		if len(item.Id) == 0 {
+			t.Fatalf("expected id to be present")
+		}
 	}
 }
+
+func benchmarkList(n int, b *testing.B) {
+	db := NewRedisStore()
+	for i := 0; i < n; i++ {
+		db.Write(&TestR{Field: "..."})
+	}
+	var items []TestR
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		db.List(&items)
+	}
+}
+
+func BenchmarkRedisList1k(b *testing.B)  { benchmarkList(1000, b) }
+func BenchmarkRedisList10k(b *testing.B) { benchmarkList(10000, b) }
 
 func TestReadMultpile(t *testing.T) {
 	db := NewRedisStore()
@@ -139,6 +175,22 @@ func TestReadMultpile(t *testing.T) {
 		t.Fatalf("Mismatch\nexp: %#v \ngot: %#v", items, got)
 	}
 }
+
+func benchmarkReadMultiple(n int, b *testing.B) {
+	db := NewRedisStore()
+	items := make([]TestR, n, n)
+	for i := 0; i < n; i++ {
+		item := TestR{Field: "..."}
+		db.Write(&item)
+		items[i] = item
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		db.ReadMultiple(items)
+	}
+}
+
+func BenchmarkReadMultiple1k(b *testing.B) { benchmarkReadMultiple(1000, b) }
 
 func flushRedisDB() {
 	pool := NewRedisPool(NewRedisConfig())

@@ -250,6 +250,7 @@ func (s *RedisStore) Write(i Item) error {
 // List populates the slice with ids of the slice element type
 func (s *RedisStore) List(i interface{}) error {
 	v := reflect.ValueOf(i)
+	// Get the elements of the interface if its a pointer
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
@@ -262,13 +263,38 @@ func (s *RedisStore) List(i interface{}) error {
 	defer c.Close()
 
 	typeName := s.typeName(v)
-	// Ideally iterate over each page instead of limiting to MAX_ITEMS
-	reply, err := redis.Values(c.Do("SCAN", "0", "MATCH", typeName+":*", "COUNT", MAX_ITEMS))
-	if err != nil {
-		return err
+	var cursor int64
+	var keys []string
+
+	// Ideally, want to fetch in a go routine
+	for cursor >= 0 {
+		// SCAN return value is an array of two values: the first value
+		// is the new cursor to use in the next call, the second value
+		// is an array of elements.
+		reply, err := c.Do("SCAN", cursor, "MATCH", typeName+":*", "COUNT", MAX_ITEMS)
+		if err != nil {
+			return err
+		}
+		// Read the cursor bits, the driver provides them as
+		// an array of unsigned 8-bit integers
+		cursorBytes := reflect.ValueOf(reply).Index(0).Interface().([]uint8)
+
+		// Converting the []uint8 to int by converting to a string first, there
+		// is perhaps an optimal way but I could not figure out in go's constructs
+		if cursor, err = strconv.ParseInt(fmt.Sprintf("%s", cursorBytes), 10, 64); err != nil {
+			return err
+		}
+		valueBytes := reflect.ValueOf(reply).Index(1).Interface().([]interface{})
+		values, _ := redis.Strings(valueBytes, nil)
+		keys = append(keys, values...)
+		// Break the loop when the no more records left to read (cursor is 0)
+		if cursor == 0 {
+			break
+		}
 	}
 
-	keys, _ := redis.Strings(reply[1], nil)
+	// Format and copy the keys to interface.
+	// Ensure the iterface has the required length.
 	ensureSliceLen(v, len(keys))
 	for index, key := range keys {
 		// Remove the type of item from the key and just return the id

@@ -1,10 +1,10 @@
-test:
+test: get
 	@go test -v ./...
 
-updatedeps:
+get:
 	@go get -t -v ./...
 
 benchmark:
 	@go test -bench=.
 
-.PHONY: test benchmark
+.PHONY: test get benchmark

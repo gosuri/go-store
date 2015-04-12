@@ -1,7 +1,11 @@
 store [![GoDoc](https://godoc.org/github.com/gosuri/go-store?status.svg)](https://godoc.org/github.com/gosuri/go-store) [![Build Status](https://travis-ci.org/gosuri/go-store.svg?branch=master)](https://travis-ci.org/gosuri/go-store)
-=====
+=======
 
-A simple, and fast [Redis](http://redis.io) backed key-value store library for [Go](http://golang.org).
+store is a data-store library for [Go](http://golang.org) that provides a set of platform-independent interfaces to persist and retrieve data.
+
+Its primary job is to wrap existing implementations of such primitives, such as those in package redis, into shared public interfaces that abstract functionality, plus some other related primitives.
+
+It currently supports [Redis](http://redis.io) from the [redis](redis/) package.
 
 **NOTE**: This library is currently under **active development** and not ready for production use.
 

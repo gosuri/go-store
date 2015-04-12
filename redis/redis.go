@@ -1,3 +1,47 @@
+// Copyright 2015 Greg Osuri. All rights reserved.
+// Use of this source code is governed by the Apache License, Version 2.0
+// that can be found in the LICENSE file.
+
+// Package redis provides simple data persitance and retrieval functionality.
+//
+// Here is a simple example on how to write and read from redis:
+//
+//	type Hacker struct {
+//		Id        string
+//		Name      string
+//		Birthyear int
+//	}
+//
+//	func (h *Hacker) Key() string {
+//		return h.Id
+//	}
+//
+//	func (h *Hacker) SetKey(k string) {
+//		h.Id = k
+//	}
+//
+//	func main() {
+//		store := redis.NewStore()
+//
+//		// Save a hacker in the store with a auto-generated uuid
+//		store.Write(&Hacker{Name: "Alan Turing", Birthyear: 1912})
+//
+//		var hackers []Hacker
+//		// Populate hackers slice with ids of all hackers in the store
+//		store.List(&hackers)
+//
+//		alan := hackers[0]
+//		store.Read(&alan)
+//		fmt.Println("Hello,", alan.Name)
+//
+//		fmt.Println("Listing all", len(hackers), "hackers")
+//		// Fetches all hackers with names from the store
+//		store.ReadMultiple(hackers)
+//		for _, hacker := range hackers {
+//		  fmt.Printf("%s (%d) (%s)\n", hacker.Name, hacker.Birthyear, hacker.Id)
+//		}
+//	}
+//
 package redis
 
 import (
@@ -25,34 +69,31 @@ var (
 	DefaultRedisUrlEnv = "REDIS_URL"
 )
 
-// RedisItem represent the data structure
-// used to store values in redis
+// RedisItem represent the data structure used to store values in redis.
 type RedisItem struct {
 	prefix string
 	key    string
 	data   map[string]interface{}
 }
 
-// Key returns the redis key used to
-// store a redis item
+// Key returns the redis key used to store a redis item by prefix the item type.
 func (i *RedisItem) Key() string {
 	return i.prefix + ":" + i.key
 }
 
-// RedisConfig stores the configuration values used for
-// establishing a connection with Redis server
+// RedisConfig stores the configuration values used for establishing a
+// connection with Redis server.
 type RedisConfig struct {
 	Host, Port, User, Pass string
 	Db                     int
 }
 
-// RedisStore represents the Store Implmention for Redis
+// RedisStore represents the Store Implmention for Redis.
 type RedisStore struct {
 	pool *driver.Pool
 }
 
-// NewRedisStore returns a RedisStore with
-// default configuration values
+// NewStore returns a RedisStore with default configuration values.
 func NewStore() store.Store {
 	return &RedisStore{pool: NewRedisPool(NewRedisConfig())}
 }
@@ -88,7 +129,7 @@ func NewRedisConfig() *RedisConfig {
 	return c
 }
 
-// NewRedisPool returns a default redis pool with default configuration
+// NewRedisPool returns a default redis pool with default configuration.
 func NewRedisPool(config *RedisConfig) *driver.Pool {
 	return &driver.Pool{
 		MaxIdle:     3,
@@ -120,8 +161,8 @@ func NewRedisPool(config *RedisConfig) *driver.Pool {
 }
 
 // Read reads the item from redis store and copies the values to item
-// It Returns ErrKeyNotFound when no values are found for the key provided
-// and ErrKeyMissing when key is not provided. Unmarshalling id done using
+// It Returns store.ErrKeyNotFound when no values are found for the key provided
+// and store.ErrKeyMissing when key is not provided. Unmarshalling id done using
 // driver provided redis.ScanStruct
 func (s *RedisStore) Read(i store.Item) error {
 	c := s.pool.Get()
@@ -148,8 +189,7 @@ func (s *RedisStore) Read(i store.Item) error {
 	return nil
 }
 
-// ReadMultiple gets the values from redis
-// in a single call by pipelining
+// ReadMultiple gets the values from redis in a single call by pipelining
 func (s *RedisStore) ReadMultiple(i interface{}) error {
 	v := reflect.ValueOf(i)
 
@@ -208,6 +248,7 @@ func (s *RedisStore) ReadMultiple(i interface{}) error {
 	return nil
 }
 
+// WriteMultiple writes multiple items i to the store.
 func (s *RedisStore) WriteMultiple(i []store.Item) error {
 	return errors.New("Implementation pending")
 }
@@ -249,7 +290,7 @@ func (s *RedisStore) Write(i store.Item) error {
 	return nil
 }
 
-// List populates the slice with ids of the slice element type
+// List populates the slice with ids of the slice element type.
 func (s *RedisStore) List(i interface{}) error {
 	v := reflect.ValueOf(i)
 	// Get the elements of the interface if its a pointer
@@ -318,7 +359,7 @@ func (s *RedisStore) List(i interface{}) error {
 	return nil
 }
 
-// Helper function to ensure the length of the slice in n
+// ensureSliceLen is a helper function to ensure the length of the slice in n.
 func ensureSliceLen(d reflect.Value, n int) {
 	if n > d.Cap() {
 		d.Set(reflect.MakeSlice(d.Type(), n, n))
@@ -327,7 +368,7 @@ func ensureSliceLen(d reflect.Value, n int) {
 	}
 }
 
-// Helper function to return the name of the type
+// typeName is a helper function to return the name of the type.
 func (scope *RedisStore) typeName(value reflect.Value) string {
 	if value.Kind() == reflect.Slice {
 		return value.Type().Elem().Name()
@@ -335,8 +376,8 @@ func (scope *RedisStore) typeName(value reflect.Value) string {
 	return value.Type().Name()
 }
 
-// Copies the Item to RedisItem and converts the
-// struct field types to driver supported types
+// marshall is a helper function that copies the Item to RedisItem and converts
+// the struct field types to driver supported types
 func marshall(item store.Item, value reflect.Value, rItem *RedisItem) error {
 	// Ideally use the driver default marshalling redis.ConverAssignBytes
 	for i := 0; i < value.NumField(); i++ {

@@ -1,4 +1,4 @@
-package store
+package redis
 
 import (
 	"errors"
@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"code.google.com/p/go-uuid/uuid"
-	"github.com/garyburd/redigo/redis"
+	driver "github.com/garyburd/redigo/redis"
+	"github.com/gosuri/go-store/store"
 )
 
 const (
@@ -47,12 +48,12 @@ type RedisConfig struct {
 
 // RedisStore represents the Store Implmention for Redis
 type RedisStore struct {
-	pool *redis.Pool
+	pool *driver.Pool
 }
 
 // NewRedisStore returns a RedisStore with
 // default configuration values
-func NewRedisStore() Store {
+func NewStore() store.Store {
 	return &RedisStore{pool: NewRedisPool(NewRedisConfig())}
 }
 
@@ -88,12 +89,12 @@ func NewRedisConfig() *RedisConfig {
 }
 
 // NewRedisPool returns a default redis pool with default configuration
-func NewRedisPool(config *RedisConfig) *redis.Pool {
-	return &redis.Pool{
+func NewRedisPool(config *RedisConfig) *driver.Pool {
+	return &driver.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", config.Host+":"+config.Port)
+		Dial: func() (driver.Conn, error) {
+			c, err := driver.Dial("tcp", config.Host+":"+config.Port)
 			if err != nil {
 				return nil, err
 			}
@@ -111,7 +112,7 @@ func NewRedisPool(config *RedisConfig) *redis.Pool {
 			}
 			return c, err
 		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+		TestOnBorrow: func(c driver.Conn, t time.Time) error {
 			_, err := c.Do("PING")
 			return err
 		},
@@ -122,26 +123,26 @@ func NewRedisPool(config *RedisConfig) *redis.Pool {
 // It Returns ErrKeyNotFound when no values are found for the key provided
 // and ErrKeyMissing when key is not provided. Unmarshalling id done using
 // driver provided redis.ScanStruct
-func (s *RedisStore) Read(i Item) error {
+func (s *RedisStore) Read(i store.Item) error {
 	c := s.pool.Get()
 	defer c.Close()
 
 	value := reflect.ValueOf(i).Elem()
 	if len(i.Key()) == 0 {
-		return ErrEmptyKey
+		return store.ErrEmptyKey
 	}
 	ri := &RedisItem{
 		key:    i.Key(),
 		prefix: value.Type().Name(),
 	}
-	reply, err := redis.Values(c.Do("HGETALL", ri.Key()))
+	reply, err := driver.Values(c.Do("HGETALL", ri.Key()))
 	if err != nil {
 		return err
 	}
 	if len(reply) == 0 {
-		return ErrKeyNotFound
+		return store.ErrKeyNotFound
 	}
-	if err := redis.ScanStruct(reply, i); err != nil {
+	if err := driver.ScanStruct(reply, i); err != nil {
 		return err
 	}
 	return nil
@@ -173,7 +174,7 @@ func (s *RedisStore) ReadMultiple(i interface{}) error {
 	c.Send("MULTI")
 	for y := 0; y < v.Len(); y++ {
 		if key = v.Index(y).Addr().MethodByName("Key").Call(nil)[0].String(); len(key) == 0 {
-			return ErrEmptyKey
+			return store.ErrEmptyKey
 		}
 		// Send writes the command to the connection's output buffer.
 		if err = c.Send("HGETALL", prefix+key); err != nil {
@@ -198,23 +199,23 @@ func (s *RedisStore) ReadMultiple(i interface{}) error {
 	// dimension and scan each slice into destination interface type
 	for y := 0; y < replyValue.Len(); y++ {
 		itemPtrV := reflect.New(v.Type().Elem())
-		if values, err = redis.Values(replyValue.Index(y).Interface(), nil); err != nil {
+		if values, err = driver.Values(replyValue.Index(y).Interface(), nil); err != nil {
 			return err
 		}
-		redis.ScanStruct(values, itemPtrV.Interface())
+		driver.ScanStruct(values, itemPtrV.Interface())
 		v.Index(y).Set(itemPtrV.Elem())
 	}
 	return nil
 }
 
-func (s *RedisStore) WriteMultiple(i []Item) error {
+func (s *RedisStore) WriteMultiple(i []store.Item) error {
 	return errors.New("Implementation pending")
 }
 
 // Write writes the item to the store. It constructs the key using the i.Key()
 // and prefixes it with the type of struct. When the key is empty, it assigns
 // a unique universal id(UUID) using the SetKey method of the Item
-func (s *RedisStore) Write(i Item) error {
+func (s *RedisStore) Write(i store.Item) error {
 	c := s.pool.Get()
 	defer c.Close()
 
@@ -286,7 +287,7 @@ func (s *RedisStore) List(i interface{}) error {
 			return err
 		}
 		valueBytes := reflect.ValueOf(reply).Index(1).Interface().([]interface{})
-		values, _ := redis.Strings(valueBytes, nil)
+		values, _ := driver.Strings(valueBytes, nil)
 		keys = append(keys, values...)
 		// Break the loop when the no more records left to read (cursor is 0)
 		if cursor == 0 {
@@ -336,7 +337,7 @@ func (scope *RedisStore) typeName(value reflect.Value) string {
 
 // Copies the Item to RedisItem and converts the
 // struct field types to driver supported types
-func marshall(item Item, value reflect.Value, rItem *RedisItem) error {
+func marshall(item store.Item, value reflect.Value, rItem *RedisItem) error {
 	// Ideally use the driver default marshalling redis.ConverAssignBytes
 	for i := 0; i < value.NumField(); i++ {
 		// key for data map

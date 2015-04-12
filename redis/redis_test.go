@@ -1,11 +1,12 @@
-package store
+package redis
 
 import (
 	"reflect"
 	"testing"
 
 	"code.google.com/p/go-uuid/uuid"
-	"github.com/garyburd/redigo/redis"
+	driver "github.com/garyburd/redigo/redis"
+	"github.com/gosuri/go-store/store"
 )
 
 type TestR struct {
@@ -37,7 +38,7 @@ func TestWrite(t *testing.T) {
 		FieldUint:  1,
 	}
 
-	db := NewRedisStore()
+	db := NewStore()
 
 	if err := db.Write(s); err != nil {
 		t.Fatalf("err", err)
@@ -50,14 +51,14 @@ func TestWrite(t *testing.T) {
 	pool := NewRedisPool(NewRedisConfig())
 	c := pool.Get()
 	defer c.Close()
-	reply, err := redis.Values(c.Do("HGETALL", "TestR:"+s.Key()))
+	reply, err := driver.Values(c.Do("HGETALL", "TestR:"+s.Key()))
 	if err != nil {
 		t.Fatalf("err", err)
 	}
 
 	got := &TestR{}
 
-	if err := redis.ScanStruct(reply, got); err != nil {
+	if err := driver.ScanStruct(reply, got); err != nil {
 		t.Fatalf("err", err)
 	}
 
@@ -67,7 +68,7 @@ func TestWrite(t *testing.T) {
 }
 
 func BenchmarkRedisWrite(b *testing.B) {
-	db := NewRedisStore()
+	db := NewStore()
 	for i := 0; i < b.N; i++ {
 		db.Write(&TestR{Field: "BenchmarkWrite"})
 	}
@@ -78,7 +79,7 @@ func TestRead(t *testing.T) {
 		Id:    uuid.New(),
 		Field: "value",
 	}
-	db := NewRedisStore()
+	db := NewStore()
 
 	if err := db.Write(s); err != nil {
 		t.Fatalf("err", err)
@@ -93,15 +94,15 @@ func TestRead(t *testing.T) {
 }
 
 func TestReadNotFound(t *testing.T) {
-	db := NewRedisStore()
+	db := NewStore()
 	got := &TestR{Id: "invalid"}
-	if err := db.Read(got); err != ErrKeyNotFound {
+	if err := db.Read(got); err != store.ErrKeyNotFound {
 		t.Fatalf("expected ErrNotFound, got: ", err)
 	}
 }
 
 func benchmarkRead(n int, b *testing.B) {
-	db := NewRedisStore()
+	db := NewStore()
 	items := make([]TestR, n, n)
 	for i := 0; i < n; i++ {
 		item := TestR{Field: "..."}
@@ -122,7 +123,7 @@ func BenchmarkRead1k(b *testing.B) { benchmarkRead(1000, b) }
 
 func TestList(t *testing.T) {
 	flushRedisDB()
-	db := NewRedisStore()
+	db := NewStore()
 	noItems := 1001
 
 	for i := 0; i < noItems; i++ {
@@ -146,7 +147,7 @@ func TestList(t *testing.T) {
 }
 
 func benchmarkList(n int, b *testing.B) {
-	db := NewRedisStore()
+	db := NewStore()
 	for i := 0; i < n; i++ {
 		db.Write(&TestR{Field: "..."})
 	}
@@ -161,7 +162,7 @@ func BenchmarkRedisList1k(b *testing.B)  { benchmarkList(1000, b) }
 func BenchmarkRedisList10k(b *testing.B) { benchmarkList(10000, b) }
 
 func TestReadMultpile(t *testing.T) {
-	db := NewRedisStore()
+	db := NewStore()
 	i := TestR{Field: "field1"}
 	db.Write(&i)
 	i2 := TestR{Field: "field1"}
@@ -179,7 +180,7 @@ func TestReadMultpile(t *testing.T) {
 }
 
 func benchmarkReadMultiple(n int, b *testing.B) {
-	db := NewRedisStore()
+	db := NewStore()
 	items := make([]TestR, n, n)
 	for i := 0; i < n; i++ {
 		item := TestR{Field: "..."}

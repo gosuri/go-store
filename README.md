@@ -1,9 +1,7 @@
-go-store
-========
+store [![GoDoc](https://godoc.org/github.com/gosuri/go-store?status.svg)](https://godoc.org/github.com/gosuri/go-store)
+=====
 
 A simple, and fast [Redis](http://redis.io) backed key-value store library for [Go](http://golang.org).
-
-[![GoDoc](https://godoc.org/github.com/gosuri/go-store?status.svg)](https://godoc.org/github.com/gosuri/go-store)
 
 **NOTE**: This library is currently under **active development** and not ready for production use.
 
@@ -58,6 +56,16 @@ func main() {
   }
 }
 ```
+
+Contributing
+------------
+
+### Dependency management
+
+Users who import `store` into their package main are responsible to organize and maintain all of their dependencies to ensure code compatibility and build reproducibility.
+Store makes no direct use of dependency management tools like [Godep](https://github.com/tools/godep).
+
+We will use a variety of continuous integration providers to find and fix compatibility problems as soon as they occur.
 
 Running Testing
 ----------------

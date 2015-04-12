@@ -1,4 +1,4 @@
-store [![GoDoc](https://godoc.org/github.com/gosuri/go-store?status.svg)](https://godoc.org/github.com/gosuri/go-store)
+store [![GoDoc](https://godoc.org/github.com/gosuri/go-store?status.svg)](https://godoc.org/github.com/gosuri/go-store) [![Build Status](https://travis-ci.org/gosuri/go-store.svg?branch=master)](https://travis-ci.org/gosuri/go-store)
 =====
 
 A simple, and fast [Redis](http://redis.io) backed key-value store library for [Go](http://golang.org).
@@ -16,7 +16,7 @@ package main
 import (
   "fmt"
 
-  "github.com/gosuri/go-store"
+  "github.com/gosuri/go-store/redis"
 )
 
 // Hacker implements store.Item interface methods Key and SetKey
@@ -35,22 +35,22 @@ func (h *Hacker) SetKey(k string) {
 }
 
 func main() {
-  db := store.NewRedisStore()
+  store := redis.NewStore()
 
   // Save a hacker in the store with a auto-generated uuid
-  db.Write(&Hacker{Name: "Alan Turing", Birthyear: 1912})
+  store.Write(&Hacker{Name: "Alan Turing", Birthyear: 1912})
 
   var hackers []Hacker
   // Populate hackers slice with ids of all hackers in the store
-  db.List(&hackers)
+  store.List(&hackers)
 
   alan := hackers[0]
-  db.Read(&alan)
+  store.Read(&alan)
   fmt.Println("Hello,", alan.Name)
 
   fmt.Println("Listing all", len(hackers), "hackers")
   // Fetches all hackers with names from the store
-  db.ReadMultiple(hackers)
+  store.ReadMultiple(hackers)
   for _, hacker := range hackers {
     fmt.Printf("%s (%d) (%s)\n", hacker.Name, hacker.Birthyear, hacker.Id)
   }

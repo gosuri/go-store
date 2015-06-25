@@ -39,22 +39,22 @@ func (h *Hacker) SetKey(k string) {
 }
 
 func main() {
-  store := redis.NewStore()
+  db := redis.NewStore()
 
   // Save a hacker in the store with a auto-generated uuid
-  store.Write(&Hacker{Name: "Alan Turing", Birthyear: 1912})
+  db.Write(&Hacker{Name: "Alan Turing", Birthyear: 1912})
 
   var hackers []Hacker
   // Populate hackers slice with ids of all hackers in the store
-  store.List(&hackers)
+  db.List(&hackers)
 
   alan := hackers[0]
-  store.Read(&alan)
+  db.Read(&alan)
   fmt.Println("Hello,", alan.Name)
 
   fmt.Println("Listing all", len(hackers), "hackers")
   // Fetches all hackers with names from the store
-  store.ReadMultiple(hackers)
+  db.ReadMultiple(hackers)
   for _, hacker := range hackers {
     fmt.Printf("%s (%d) (%s)\n", hacker.Name, hacker.Birthyear, hacker.Id)
   }

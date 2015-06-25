@@ -336,8 +336,8 @@ func (s *RedisStore) List(i interface{}) error {
 		}
 	}
 
-	// Format and copy the keys to interface.
-	// Ensure the iterface has the required length.
+	// Format and copy the keys to interface and ensure the interface
+	// has the required length.
 	ensureSliceLen(v, len(keys))
 	for index, key := range keys {
 		// Remove the type of item from the key and just return the id
@@ -359,7 +359,7 @@ func (s *RedisStore) List(i interface{}) error {
 	return nil
 }
 
-// ensureSliceLen is a helper function to ensure the length of the slice in n.
+// ensureSliceLen is a helper function to ensure the length of the slice is n
 func ensureSliceLen(d reflect.Value, n int) {
 	if n > d.Cap() {
 		d.Set(reflect.MakeSlice(d.Type(), n, n))

@@ -249,8 +249,35 @@ func (s *RedisStore) ReadMultiple(i interface{}) error {
 }
 
 // WriteMultiple writes multiple items i to the store.
-func (s *RedisStore) WriteMultiple(i []store.Item) error {
-	return errors.New("Implementation pending")
+func (s *RedisStore) WriteMultiple(i interface{}) error {
+	v := reflect.ValueOf(i)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Slice {
+		return errors.New("store: value must be a a slice")
+	}
+
+	// MULTI command marks the start of the transaction, subsequent commands
+	// will be queued up until EXEC is issued. EXEC returns an array of replies,
+	// where every element is the reply of a single command in the transaction,
+	// in the same order the commands were issued.
+	c := s.pool.Get()
+	defer c.Close()
+
+	// c.Send("MULTI")
+	for y := 0; y < v.Len(); y++ {
+		obj := v.Index(y).Addr()
+		// Set item's key as newly generated UUID if missing
+		if key := obj.MethodByName("Key").Call(nil)[0].String(); len(key) == 0 {
+			obj.MethodByName("SetKey").Call([]reflect.Value{reflect.ValueOf(uuid.New())})
+		}
+
+		fmt.Printf("%#v", v)
+		//fmt.Println("key is blank")
+	}
+
+	return nil
 }
 
 // Write writes the item to the store. It constructs the key using the i.Key()
@@ -267,8 +294,7 @@ func (s *RedisStore) Write(i store.Item) error {
 		data:   make(map[string]interface{}),
 	}
 
-	// Use the Items id if set or generate
-	// a new UUID
+	// Set item's key as newly generated UUID if missing
 	ri.key = i.Key()
 	if len(ri.key) == 0 {
 		ri.key = uuid.New()

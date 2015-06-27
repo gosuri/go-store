@@ -97,7 +97,7 @@ type MultiReader interface {
 
 // MultiWriter is the interface that wraps WriteMultiple method.
 type MultiWriter interface {
-	WriteMultiple(items []Item) error
+	WriteMultiple(interface{}) error
 }
 
 // MultiReadWriter is the interface that groups MultiReader and

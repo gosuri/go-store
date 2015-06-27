@@ -183,6 +183,19 @@ func TestReadMultpile(t *testing.T) {
 	}
 }
 
+func TestWriteMultile(t *testing.T) {
+	db := NewStore()
+	i := &TestR{Field: "rec1"}
+	i2 := &TestR{Field: "rec2"}
+	items := []*TestR{i, i2}
+	if err := db.WriteMultiple(items); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(i.Key()) == 0 {
+		t.Fatalf("expected key to be present")
+	}
+}
+
 func benchmarkReadMultiple(n int, b *testing.B) {
 	db := NewStore()
 	items := make([]TestR, n, n)

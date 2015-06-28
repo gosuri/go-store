@@ -14,7 +14,7 @@ import (
 )
 
 type TestR struct {
-	Id         string
+	ID         string
 	Field      string
 	FieldFloat float32
 	FieldInt   int
@@ -25,16 +25,16 @@ type TestR struct {
 type TestRs []TestR
 
 func (s *TestR) Key() string {
-	return s.Id
+	return s.ID
 }
 
 func (s *TestR) SetKey(k string) {
-	s.Id = k
+	s.ID = k
 }
 
 func TestWrite(t *testing.T) {
 	s := &TestR{
-		Id:         uuid.New(),
+		ID:         uuid.New(),
 		Field:      "value",
 		FieldInt:   10,
 		FieldFloat: 1.234,
@@ -45,29 +45,29 @@ func TestWrite(t *testing.T) {
 	db := NewStore()
 
 	if err := db.Write(s); err != nil {
-		t.Fatalf("err", err)
+		t.Fatal("err", err)
 	}
 
 	if len(s.Key()) == 0 {
 		t.Fatalf("key is emtpy %#v", s)
 	}
 
-	pool := NewRedisPool(NewRedisConfig())
+	pool := NewPool(NewConfig())
 	c := pool.Get()
 	defer c.Close()
 	reply, err := driver.Values(c.Do("HGETALL", "TestR:"+s.Key()))
 	if err != nil {
-		t.Fatalf("err", err)
+		t.Fatal("err", err)
 	}
 
 	got := &TestR{}
 
 	if err := driver.ScanStruct(reply, got); err != nil {
-		t.Fatalf("err", err)
+		t.Fatal("err", err)
 	}
 
 	if !reflect.DeepEqual(s, got) {
-		t.Fatalf("expected:", s, " got:", got)
+		t.Fatal("expected:", s, " got:", got)
 	}
 }
 
@@ -80,28 +80,28 @@ func BenchmarkRedisWrite(b *testing.B) {
 
 func TestRead(t *testing.T) {
 	s := &TestR{
-		Id:    uuid.New(),
+		ID:    uuid.New(),
 		Field: "value",
 	}
 	db := NewStore()
 
 	if err := db.Write(s); err != nil {
-		t.Fatalf("err", err)
+		t.Fatal("err", err)
 	}
-	got := &TestR{Id: s.Key()}
+	got := &TestR{ID: s.Key()}
 	if err := db.Read(got); err != nil {
-		t.Fatalf("err", err)
+		t.Fatal("err", err)
 	}
 	if !reflect.DeepEqual(s, got) {
-		t.Fatalf("expected:", s, " got:", got)
+		t.Fatal("expected:", s, " got:", got)
 	}
 }
 
 func TestReadNotFound(t *testing.T) {
 	db := NewStore()
-	got := &TestR{Id: "invalid"}
+	got := &TestR{ID: "invalid"}
 	if err := db.Read(got); err != store.ErrKeyNotFound {
-		t.Fatalf("expected ErrNotFound, got: ", err)
+		t.Fatal("expected ErrNotFound, got: ", err)
 	}
 }
 
@@ -136,7 +136,7 @@ func TestList(t *testing.T) {
 
 	var got []TestR
 	if err := db.List(&got); err != nil {
-		t.Fatalf("err", err)
+		t.Fatal("err", err)
 	}
 
 	if len(got) != noItems {
@@ -144,8 +144,8 @@ func TestList(t *testing.T) {
 	}
 
 	for _, item := range got {
-		if len(item.Id) == 0 {
-			t.Fatalf("expected id to be present")
+		if len(item.ID) == 0 {
+			t.Fatal("expected id to be present")
 		}
 	}
 }
@@ -173,7 +173,7 @@ func TestReadMultpile(t *testing.T) {
 	db.Write(&i2)
 	items := []TestR{i, i2}
 
-	got := []TestR{{Id: i.Key()}, {Id: i2.Key()}}
+	got := []TestR{{ID: i.Key()}, {ID: i2.Key()}}
 	if err := db.ReadMultiple(got); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -200,7 +200,7 @@ func benchmarkReadMultiple(n int, b *testing.B) {
 func BenchmarkReadMultiple1k(b *testing.B) { benchmarkReadMultiple(1000, b) }
 
 func flushRedisDB() {
-	pool := NewRedisPool(NewRedisConfig())
+	pool := NewPool(NewConfig())
 	c := pool.Get()
 	defer c.Close()
 	if _, err := c.Do("FLUSHDB"); err != nil {

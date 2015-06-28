@@ -59,58 +59,59 @@ import (
 )
 
 const (
-	// Max items to fetch per call from the store
-	MAX_ITEMS = 1024
+	// MaxItems specifies the max number of items to fetch form redis on each call
+	MaxItems = 1024
 )
 
 var (
-	// The environment variable to lookup redis connection url with
-	// the format redis://:password@hostname:port/db_number
-	DefaultRedisUrlEnv = "REDIS_URL"
+	// DefaultRedisURLEnv specifies the name of environment variable
+	// that contains the Redis connection url. It expects the format
+	// redis://:password@hostname:port/db_number
+	DefaultRedisURLEnv = "REDIS_URL"
 )
 
-// RedisItem represent the data structure used to store values in redis.
-type RedisItem struct {
+// Item represent the data structure used to store values in redis.
+type Item struct {
 	prefix string
 	key    string
 	data   map[string]interface{}
 }
 
 // Key returns the redis key used to store a redis item by prefix the item type.
-func (i *RedisItem) Key() string {
+func (i *Item) Key() string {
 	return i.prefix + ":" + i.key
 }
 
-// RedisConfig stores the configuration values used for establishing a
+// Config stores the configuration values used for establishing a
 // connection with Redis server.
-type RedisConfig struct {
+type Config struct {
 	Host, Port, User, Pass string
 	Db                     int
 }
 
-// RedisStore represents the Store Implmention for Redis.
-type RedisStore struct {
+// Store represents the Store implemention for Redis.
+type Store struct {
 	pool *driver.Pool
 }
 
-// NewStore returns a RedisStore with default configuration values.
+// NewStore returns an instance of Store with default configuration values
 func NewStore() store.Store {
-	return &RedisStore{pool: NewRedisPool(NewRedisConfig())}
+	return &Store{pool: NewPool(NewConfig())}
 }
 
-// NewRedisConfig returns a default redis config. It uses the environment
+// NewConfig returns a default redis config. It uses the environment
 // variable $REDIS_URL with the format redis://:password@hostname:port/db_number
 // when present or defaults to 127.0.0.1:6379
-func NewRedisConfig() *RedisConfig {
+func NewConfig() *Config {
 	// Use local Redis instance by default
-	c := &RedisConfig{
+	c := &Config{
 		Host: "127.0.0.1",
 		Port: "6379",
 	}
 
 	// Override default configure when env var $REDIS_URL
 	// is present with the format redis://user:pass@host:port
-	if url := os.Getenv(DefaultRedisUrlEnv); len(url) > 0 {
+	if url := os.Getenv(DefaultRedisURLEnv); len(url) > 0 {
 		url = strings.TrimPrefix(url, "redis://")
 		parts := strings.Split(url, "@")
 
@@ -129,8 +130,8 @@ func NewRedisConfig() *RedisConfig {
 	return c
 }
 
-// NewRedisPool returns a default redis pool with default configuration.
-func NewRedisPool(config *RedisConfig) *driver.Pool {
+// NewPool returns a default redis pool with default configuration.
+func NewPool(config *Config) *driver.Pool {
 	return &driver.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
@@ -164,7 +165,7 @@ func NewRedisPool(config *RedisConfig) *driver.Pool {
 // It Returns store.ErrKeyNotFound when no values are found for the key provided
 // and store.ErrKeyMissing when key is not provided. Unmarshalling id done using
 // driver provided redis.ScanStruct
-func (s *RedisStore) Read(i store.Item) error {
+func (s *Store) Read(i store.Item) error {
 	c := s.pool.Get()
 	defer c.Close()
 
@@ -172,7 +173,7 @@ func (s *RedisStore) Read(i store.Item) error {
 	if len(i.Key()) == 0 {
 		return store.ErrEmptyKey
 	}
-	ri := &RedisItem{
+	ri := &Item{
 		key:    i.Key(),
 		prefix: value.Type().Name(),
 	}
@@ -190,7 +191,7 @@ func (s *RedisStore) Read(i store.Item) error {
 }
 
 // ReadMultiple gets the values from redis in a single call by pipelining
-func (s *RedisStore) ReadMultiple(i interface{}) error {
+func (s *Store) ReadMultiple(i interface{}) error {
 	v := reflect.ValueOf(i)
 
 	if v.Kind() == reflect.Ptr {
@@ -249,20 +250,20 @@ func (s *RedisStore) ReadMultiple(i interface{}) error {
 }
 
 // WriteMultiple writes multiple items i to the store.
-func (s *RedisStore) WriteMultiple(i []store.Item) error {
+func (s *Store) WriteMultiple(i []store.Item) error {
 	return errors.New("Implementation pending")
 }
 
 // Write writes the item to the store. It constructs the key using the i.Key()
 // and prefixes it with the type of struct. When the key is empty, it assigns
 // a unique universal id(UUID) using the SetKey method of the Item
-func (s *RedisStore) Write(i store.Item) error {
+func (s *Store) Write(i store.Item) error {
 	c := s.pool.Get()
 	defer c.Close()
 
 	value := reflect.ValueOf(i).Elem()
 
-	ri := &RedisItem{
+	ri := &Item{
 		prefix: s.typeName(value),
 		data:   make(map[string]interface{}),
 	}
@@ -291,7 +292,7 @@ func (s *RedisStore) Write(i store.Item) error {
 }
 
 // List populates the slice with ids of the slice element type.
-func (s *RedisStore) List(i interface{}) error {
+func (s *Store) List(i interface{}) error {
 	v := reflect.ValueOf(i)
 	// Get the elements of the interface if its a pointer
 	if v.Kind() == reflect.Ptr {
@@ -314,7 +315,7 @@ func (s *RedisStore) List(i interface{}) error {
 		// SCAN return value is an array of two values: the first value
 		// is the new cursor to use in the next call, the second value
 		// is an array of elements.
-		reply, err := c.Do("SCAN", cursor, "MATCH", typeName+":*", "COUNT", MAX_ITEMS)
+		reply, err := c.Do("SCAN", cursor, "MATCH", typeName+":*", "COUNT", MaxItems)
 		if err != nil {
 			return err
 		}
@@ -369,16 +370,16 @@ func ensureSliceLen(d reflect.Value, n int) {
 }
 
 // typeName is a helper function to return the name of the type.
-func (scope *RedisStore) typeName(value reflect.Value) string {
+func (s *Store) typeName(value reflect.Value) string {
 	if value.Kind() == reflect.Slice {
 		return value.Type().Elem().Name()
 	}
 	return value.Type().Name()
 }
 
-// marshall is a helper function that copies the Item to RedisItem and converts
+// marshall is a helper function that copies the store.Item to redis.Item and converts
 // the struct field types to driver supported types
-func marshall(item store.Item, value reflect.Value, rItem *RedisItem) error {
+func marshall(item store.Item, value reflect.Value, rItem *Item) error {
 	// Ideally use the driver default marshalling redis.ConverAssignBytes
 	for i := 0; i < value.NumField(); i++ {
 		// key for data map
@@ -400,7 +401,7 @@ func marshall(item store.Item, value reflect.Value, rItem *RedisItem) error {
 				rItem.data[k] = "0"
 			}
 		default:
-			return errors.New(fmt.Sprintf("store: cannot convert %s (type: %s)", k, field.Kind()))
+			return fmt.Errorf("store: cannot convert %s (type: %s)", k, field.Kind())
 		}
 	}
 	return nil

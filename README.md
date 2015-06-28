@@ -61,6 +61,17 @@ func main() {
 }
 ```
 
+Roadmap
+-------
+
+Below are items I plan on working on in the near future
+
+Feature | Status
+--- | ---
+Save multiple records in a single call using pipelining | **implementing**
+Destroy records | 
+Query (using finders) and indexing |
+
 Contributing
 ------------
 

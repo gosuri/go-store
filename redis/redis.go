@@ -53,8 +53,8 @@ import (
 	"strings"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
-	driver "github.com/garyburd/redigo/redis"
+	"github.com/gosuri/go-store/_vendor/src/code.google.com/p/go-uuid/uuid"
+	driver "github.com/gosuri/go-store/_vendor/src/github.com/garyburd/redigo/redis"
 	"github.com/gosuri/go-store/store"
 )
 

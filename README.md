@@ -3,7 +3,7 @@ store [![GoDoc](https://godoc.org/github.com/gosuri/go-store?status.svg)](https:
 
 store is a data-store library for [Go](http://golang.org) that provides a set of platform-independent interfaces to persist and retrieve data.
 
-Its primary job is to wrap existing implementations of such primitives, such as those in package redis, into shared public interfaces that abstract functionality, plus some other related primitives.
+Its primary goal is to wrap existing implementations of such primitives, such as those in package redis, into shared public interfaces that abstract functionality, plus some other related primitives.
 
 It currently supports [Redis](http://redis.io) from the [redis](redis/) package.
 
@@ -64,7 +64,7 @@ func main() {
 Roadmap
 -------
 
-Below are items I plan on working on in the near future
+Below are items I am and plan on working on in the near future. Contributions are welcome.
 
 Feature | Status
 --- | ---

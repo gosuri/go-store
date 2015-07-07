@@ -1,4 +1,4 @@
-test: get
+test:
 	@go test -v ./...
 
 get:

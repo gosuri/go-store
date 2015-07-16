@@ -69,7 +69,6 @@ Below are items I am and plan on working on in the near future. Contributions ar
 Feature | Status
 --- | ---
 Save multiple records in a single call using pipelining | **implementing**
-Destroy records | 
 Query (using finders) and indexing |
 
 Contributing

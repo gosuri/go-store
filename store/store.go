@@ -112,7 +112,7 @@ type MultiWriter interface {
 
 // MultiDeleter is the interface that wraps DeleteMultiple method.
 type MultiDeleter interface {
-	DeleteMultiple(items []Item) error
+	DeleteMultiple(items []Item) (int, error)
 }
 
 // MultiReadWriter is the interface that groups MultiReader and

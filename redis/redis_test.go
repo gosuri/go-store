@@ -125,6 +125,74 @@ func TestDelete(t *testing.T) {
 	}
 }
 
+func TestDeleteMultiple(t *testing.T) {
+	s := &TestR{
+		ID:    uuid.New(),
+		Field: "value",
+	}
+
+	s1 := &TestR{
+		ID:    uuid.New(),
+		Field: "value1",
+	}
+
+	db := NewStore()
+
+	if err := db.Write(s); err != nil {
+		t.Fatal("err", err)
+	}
+
+	if err := db.Write(s1); err != nil {
+		t.Fatal("err", err)
+	}
+
+	toDel := []store.Item{s, s1}
+	count, err := db.DeleteMultiple(toDel)
+	if err != nil {
+		t.Fatal("err", err)
+	}
+	if count != 2 {
+		t.Fatal("expected 2 deletions, got: ", count)
+	}
+}
+
+func TestPartialDeleteMultiple(t *testing.T) {
+	s := &TestR{
+		ID:    uuid.New(),
+		Field: "value",
+	}
+
+	s1 := &TestR{
+		ID:    uuid.New(),
+		Field: "value1",
+	}
+
+	s2 := &TestR{
+		ID:    uuid.New(),
+		Field: "value2",
+	}
+
+	db := NewStore()
+
+	if err := db.Write(s); err != nil {
+		t.Fatal("err", err)
+	}
+
+	if err := db.Write(s1); err != nil {
+		t.Fatal("err", err)
+	}
+
+	toDel := []store.Item{s, s1, s2}
+	count, err := db.DeleteMultiple(toDel)
+	if err != store.ErrKeyNotFound {
+		t.Fatal("expected ErrKeyNotFound, got: ", err)
+	}
+
+	if count != 2 {
+		t.Fatal("expected 2 deletions, got: ", count)
+	}
+}
+
 func TestDeleteNotFound(t *testing.T) {
 	db := NewStore()
 	got := &TestR{ID: "invalid"}

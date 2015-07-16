@@ -291,9 +291,30 @@ func (s *Store) Write(i store.Item) error {
 	return nil
 }
 
-// DeleteMultiple deletes multiple items i from the store.
-func (s *Store) DeleteMultiple(i []store.Item) error {
-	return errors.New("Implementation pending")
+// DeleteMultiple deletes multiple items i from the store. It returns the count
+// of items successfully deleted. It returns an error if any of the items do
+// not exist or can't be deleted. It will delete the other items, in that case.
+func (s *Store) DeleteMultiple(items []store.Item) (int, error) {
+	c := s.pool.Get()
+	defer c.Close()
+
+	keys := make([]interface{}, len(items))
+	for i, item := range items {
+		value := reflect.ValueOf(item).Elem()
+		if len(item.Key()) > 0 {
+			keys[i] = fmt.Sprintf("%s:%s", s.typeName(value), item.Key())
+		}
+	}
+
+	count, err := driver.Int(c.Do("DEL", keys...))
+	if err != nil {
+		return 0, err
+	}
+	if count != len(keys) {
+		return count, store.ErrKeyNotFound
+	}
+
+	return count, nil
 }
 
 // Delete deletes the item from the store. It constructs the key using i.Key().

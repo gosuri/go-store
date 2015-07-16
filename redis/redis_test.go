@@ -105,6 +105,42 @@ func TestReadNotFound(t *testing.T) {
 	}
 }
 
+func TestDelete(t *testing.T) {
+	s := &TestR{
+		ID:    uuid.New(),
+		Field: "value",
+	}
+	db := NewStore()
+
+	if err := db.Write(s); err != nil {
+		t.Fatal("err", err)
+	}
+	got := &TestR{ID: s.Key()}
+	if err := db.Delete(got); err != nil {
+		t.Fatal("err", err)
+	}
+
+	if err := db.Read(got); err != store.ErrKeyNotFound {
+		t.Fatal("expected ErrNotFound, got: ", err)
+	}
+}
+
+func TestDeleteNotFound(t *testing.T) {
+	db := NewStore()
+	got := &TestR{ID: "invalid"}
+	if err := db.Delete(got); err != store.ErrKeyNotFound {
+		t.Fatal("expected ErrKeyNotFound, got: ", err)
+	}
+}
+
+func TestDeleteNoKey(t *testing.T) {
+	db := NewStore()
+	got := &TestR{}
+	if err := db.Delete(got); err != store.ErrEmptyKey {
+		t.Fatal("expected ErrEmptyKey, got: ", err)
+	}
+}
+
 func benchmarkRead(n int, b *testing.B) {
 	db := NewStore()
 	items := make([]TestR, n, n)
@@ -165,7 +201,7 @@ func benchmarkList(n int, b *testing.B) {
 func BenchmarkRedisList1k(b *testing.B)  { benchmarkList(1000, b) }
 func BenchmarkRedisList10k(b *testing.B) { benchmarkList(10000, b) }
 
-func TestReadMultpile(t *testing.T) {
+func TestReadMultiple(t *testing.T) {
 	db := NewStore()
 	i := TestR{Field: "field1"}
 	db.Write(&i)

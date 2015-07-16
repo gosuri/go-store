@@ -79,10 +79,20 @@ type Reader interface {
 	Read(i Item) error
 }
 
-// ReadWriter is the interface that groups Reader and Writer interfaces.
+// Deleter is the interface that wraps the basic Delete method.
+//
+// Delete deletes i from the underlying datastore. It returns any error
+// encountered that prevented the deletion from occurring.
+type Deleter interface {
+	Delete(i Item) error
+}
+
+// ReadWriter is the interface that groups Reader, Writer and Deleter
+// interfaces.
 type ReadWriter interface {
 	Reader
 	Writer
+	Deleter
 }
 
 // Lister is the interface that wraps the basic List method.
@@ -100,9 +110,15 @@ type MultiWriter interface {
 	WriteMultiple(items []Item) error
 }
 
+// MultiDeleter is the interface that wraps DeleteMultiple method.
+type MultiDeleter interface {
+	DeleteMultiple(items []Item) error
+}
+
 // MultiReadWriter is the interface that groups MultiReader and
 // MultiWriter interfaces.
 type MultiReadWriter interface {
 	MultiReader
 	MultiWriter
+	MultiDeleter
 }

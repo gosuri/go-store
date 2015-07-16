@@ -291,6 +291,40 @@ func (s *Store) Write(i store.Item) error {
 	return nil
 }
 
+// DeleteMultiple deletes multiple items i from the store.
+func (s *Store) DeleteMultiple(i []store.Item) error {
+	return errors.New("Implementation pending")
+}
+
+// Delete deletes the item from the store. It constructs the key using i.Key().
+// When the key is empty, it returns a store.ErrEmptyKey error. When the key
+// does not exist, it returns a store.ErrKeyNotFound error.
+func (s *Store) Delete(i store.Item) error {
+	c := s.pool.Get()
+	defer c.Close()
+
+	value := reflect.ValueOf(i).Elem()
+
+	ri := &Item{
+		prefix: s.typeName(value),
+	}
+
+	ri.key = i.Key()
+	if len(ri.key) == 0 {
+		return store.ErrEmptyKey
+	}
+
+	count, err := driver.Int(c.Do("DEL", ri.Key()))
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return store.ErrKeyNotFound
+	}
+
+	return nil
+}
+
 // List populates the slice with ids of the slice element type.
 func (s *Store) List(i interface{}) error {
 	v := reflect.ValueOf(i)

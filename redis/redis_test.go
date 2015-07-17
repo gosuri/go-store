@@ -105,6 +105,110 @@ func TestReadNotFound(t *testing.T) {
 	}
 }
 
+func TestDelete(t *testing.T) {
+	s := &TestR{
+		ID:    uuid.New(),
+		Field: "value",
+	}
+	db := NewStore()
+
+	if err := db.Write(s); err != nil {
+		t.Fatal("err", err)
+	}
+	got := &TestR{ID: s.Key()}
+	if err := db.Delete(got); err != nil {
+		t.Fatal("err", err)
+	}
+
+	if err := db.Read(got); err != store.ErrKeyNotFound {
+		t.Fatal("expected ErrNotFound, got: ", err)
+	}
+}
+
+func TestDeleteMultiple(t *testing.T) {
+	s := &TestR{
+		ID:    uuid.New(),
+		Field: "value",
+	}
+
+	s1 := &TestR{
+		ID:    uuid.New(),
+		Field: "value1",
+	}
+
+	db := NewStore()
+
+	if err := db.Write(s); err != nil {
+		t.Fatal("err", err)
+	}
+
+	if err := db.Write(s1); err != nil {
+		t.Fatal("err", err)
+	}
+
+	toDel := []store.Item{s, s1}
+	count, err := db.DeleteMultiple(toDel)
+	if err != nil {
+		t.Fatal("err", err)
+	}
+	if count != 2 {
+		t.Fatal("expected 2 deletions, got: ", count)
+	}
+}
+
+func TestPartialDeleteMultiple(t *testing.T) {
+	s := &TestR{
+		ID:    uuid.New(),
+		Field: "value",
+	}
+
+	s1 := &TestR{
+		ID:    uuid.New(),
+		Field: "value1",
+	}
+
+	s2 := &TestR{
+		ID:    uuid.New(),
+		Field: "value2",
+	}
+
+	db := NewStore()
+
+	if err := db.Write(s); err != nil {
+		t.Fatal("err", err)
+	}
+
+	if err := db.Write(s1); err != nil {
+		t.Fatal("err", err)
+	}
+
+	toDel := []store.Item{s, s1, s2}
+	count, err := db.DeleteMultiple(toDel)
+	if err != store.ErrKeyNotFound {
+		t.Fatal("expected ErrKeyNotFound, got: ", err)
+	}
+
+	if count != 2 {
+		t.Fatal("expected 2 deletions, got: ", count)
+	}
+}
+
+func TestDeleteNotFound(t *testing.T) {
+	db := NewStore()
+	got := &TestR{ID: "invalid"}
+	if err := db.Delete(got); err != store.ErrKeyNotFound {
+		t.Fatal("expected ErrKeyNotFound, got: ", err)
+	}
+}
+
+func TestDeleteNoKey(t *testing.T) {
+	db := NewStore()
+	got := &TestR{}
+	if err := db.Delete(got); err != store.ErrEmptyKey {
+		t.Fatal("expected ErrEmptyKey, got: ", err)
+	}
+}
+
 func benchmarkRead(n int, b *testing.B) {
 	db := NewStore()
 	items := make([]TestR, n, n)
@@ -165,7 +269,7 @@ func benchmarkList(n int, b *testing.B) {
 func BenchmarkRedisList1k(b *testing.B)  { benchmarkList(1000, b) }
 func BenchmarkRedisList10k(b *testing.B) { benchmarkList(10000, b) }
 
-func TestReadMultpile(t *testing.T) {
+func TestReadMultiple(t *testing.T) {
 	db := NewStore()
 	i := TestR{Field: "field1"}
 	db.Write(&i)

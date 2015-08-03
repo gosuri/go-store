@@ -142,7 +142,7 @@ func NewConfig(connUrl string) (*Config, error) {
 	}
 
 	// Set redis db number if exists
-	rDb := strings.TrimSuffix(rUrl.Path, "/")
+	rDb := strings.TrimPrefix(rUrl.Path, "/")
 	if len(rDb) > 0 {
 		if config.Db, err = strconv.Atoi(rDb); err != nil {
 			return config, err

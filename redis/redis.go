@@ -21,7 +21,7 @@
 //	}
 //
 //	func main() {
-//		store := redis.NewStore()
+//		store := redis.NewStore("")
 //
 //		// Save a hacker in the store with a auto-generated uuid
 //		store.Write(&Hacker{Name: "Alan Turing", Birthyear: 1912})
@@ -47,6 +47,7 @@ package redis
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"reflect"
 	"strconv"
@@ -68,6 +69,9 @@ var (
 	// that contains the Redis connection url. It expects the format
 	// redis://:password@hostname:port/db_number
 	DefaultRedisURLEnv = "REDIS_URL"
+
+	// Default connection url to connect to redis
+	DefaultRedisUrl = "redis://@127.0.0.1:6379"
 )
 
 // Item represent the data structure used to store values in redis.
@@ -85,8 +89,8 @@ func (i *Item) Key() string {
 // Config stores the configuration values used for establishing a
 // connection with Redis server.
 type Config struct {
-	Host, Port, User, Pass string
-	Db                     int
+	Host, Port, Pass string
+	Db               int
 }
 
 // Store represents the Store implemention for Redis.
@@ -94,40 +98,57 @@ type Store struct {
 	pool *driver.Pool
 }
 
-// NewStore returns an instance of Store with default configuration values
-func NewStore() store.Store {
-	return &Store{pool: NewPool(NewConfig())}
+// NewStore returns an instance of Store. It parses the connection information from the connUrl provided
+// and expects the format redis://:password@hostname:port/db_number. If connUrl is empty it reads from
+// the environment variable DefaultRedisURLEnv or defaults to redis://127.0.0.0:6837
+func NewStore(connUrl string) (store.Store, error) {
+	config, err := NewConfig(connUrl)
+	if err != nil {
+		return &Store{}, err
+	}
+	return &Store{pool: NewPool(config)}, nil
 }
 
-// NewConfig returns a default redis config. It uses the environment
-// variable $REDIS_URL with the format redis://:password@hostname:port/db_number
-// when present or defaults to 127.0.0.1:6379
-func NewConfig() *Config {
-	// Use local Redis instance by default
-	c := &Config{
-		Host: "127.0.0.1",
-		Port: "6379",
+// NewConfig returns a default redis config. It parses the connection information from the connUrl provided
+// and expects the format redis://:password@hostname:port/db_number. If connUrl is empty it reads from
+// the environment variable DefaultRedisURLEnv or defaults to redis://127.0.0.0:6837
+func NewConfig(connUrl string) (*Config, error) {
+	// read from DefaultRedisURLEnv var if url is missing
+	config := &Config{}
+	if len(connUrl) == 0 {
+		connUrl = os.Getenv(DefaultRedisURLEnv)
 	}
 
-	// Override default configure when env var $REDIS_URL
-	// is present with the format redis://user:pass@host:port
-	if url := os.Getenv(DefaultRedisURLEnv); len(url) > 0 {
-		url = strings.TrimPrefix(url, "redis://")
-		parts := strings.Split(url, "@")
+	// default to redis://@127.0.0.0:6837 if no environment variable is present
+	if len(connUrl) == 0 {
+		connUrl = DefaultRedisUrl
+	}
 
-		// username and/or password exists
-		if len(parts) == 2 {
-			auth := strings.Split(parts[0], ":")
-			c.User, c.Pass = auth[0], auth[1]
-		}
+	rUrl, err := url.Parse(connUrl)
+	if err != nil {
+		return config, err
+	}
 
-		// the last part of the url is the address
-		if addr := parts[len(parts)-1]; len(addr) > 0 {
-			addrparts := strings.Split(addr, ":")
-			c.Host, c.Port = addrparts[0], addrparts[1]
+	// Parse redis host and port
+	rHost := strings.Split(rUrl.Host, ":")
+	config.Host = rHost[0]
+	config.Port = rHost[1]
+
+	// Set password if exits
+
+	rPass, passOk := rUrl.User.Password()
+	if passOk {
+		config.Pass = rPass
+	}
+
+	// Set redis db number if exists
+	rDb := strings.TrimSuffix(rUrl.Path, "/")
+	if len(rDb) > 0 {
+		if config.Db, err = strconv.Atoi(rDb); err != nil {
+			return config, err
 		}
 	}
-	return c
+	return config, nil
 }
 
 // NewPool returns a default redis pool with default configuration.

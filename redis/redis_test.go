@@ -42,7 +42,10 @@ func TestWrite(t *testing.T) {
 		FieldUint:  1,
 	}
 
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.Write(s); err != nil {
 		t.Fatal("err", err)
@@ -52,7 +55,12 @@ func TestWrite(t *testing.T) {
 		t.Fatalf("key is emtpy %#v", s)
 	}
 
-	pool := NewPool(NewConfig())
+	cfg, err := NewConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pool := NewPool(cfg)
 	c := pool.Get()
 	defer c.Close()
 	reply, err := driver.Values(c.Do("HGETALL", "TestR:"+s.Key()))
@@ -72,7 +80,10 @@ func TestWrite(t *testing.T) {
 }
 
 func BenchmarkRedisWrite(b *testing.B) {
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		b.Fatal("err", err)
+	}
 	for i := 0; i < b.N; i++ {
 		db.Write(&TestR{Field: "BenchmarkWrite"})
 	}
@@ -83,7 +94,10 @@ func TestRead(t *testing.T) {
 		ID:    uuid.New(),
 		Field: "value",
 	}
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.Write(s); err != nil {
 		t.Fatal("err", err)
@@ -98,7 +112,10 @@ func TestRead(t *testing.T) {
 }
 
 func TestReadNotFound(t *testing.T) {
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		t.Fatal(err)
+	}
 	got := &TestR{ID: "invalid"}
 	if err := db.Read(got); err != store.ErrKeyNotFound {
 		t.Fatal("expected ErrNotFound, got: ", err)
@@ -110,7 +127,10 @@ func TestDelete(t *testing.T) {
 		ID:    uuid.New(),
 		Field: "value",
 	}
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.Write(s); err != nil {
 		t.Fatal("err", err)
@@ -136,7 +156,10 @@ func TestDeleteMultiple(t *testing.T) {
 		Field: "value1",
 	}
 
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.Write(s); err != nil {
 		t.Fatal("err", err)
@@ -172,7 +195,10 @@ func TestPartialDeleteMultiple(t *testing.T) {
 		Field: "value2",
 	}
 
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.Write(s); err != nil {
 		t.Fatal("err", err)
@@ -194,7 +220,10 @@ func TestPartialDeleteMultiple(t *testing.T) {
 }
 
 func TestDeleteNotFound(t *testing.T) {
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		t.Fatal(err)
+	}
 	got := &TestR{ID: "invalid"}
 	if err := db.Delete(got); err != store.ErrKeyNotFound {
 		t.Fatal("expected ErrKeyNotFound, got: ", err)
@@ -202,7 +231,10 @@ func TestDeleteNotFound(t *testing.T) {
 }
 
 func TestDeleteNoKey(t *testing.T) {
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		t.Fatal(err)
+	}
 	got := &TestR{}
 	if err := db.Delete(got); err != store.ErrEmptyKey {
 		t.Fatal("expected ErrEmptyKey, got: ", err)
@@ -210,7 +242,10 @@ func TestDeleteNoKey(t *testing.T) {
 }
 
 func benchmarkRead(n int, b *testing.B) {
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		b.Fatal(err)
+	}
 	items := make([]TestR, n, n)
 	for i := 0; i < n; i++ {
 		item := TestR{Field: "..."}
@@ -231,7 +266,10 @@ func BenchmarkRead1k(b *testing.B) { benchmarkRead(1000, b) }
 
 func TestList(t *testing.T) {
 	flushRedisDB()
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		t.Fatal(err)
+	}
 	noItems := 1001
 
 	for i := 0; i < noItems; i++ {
@@ -255,7 +293,10 @@ func TestList(t *testing.T) {
 }
 
 func benchmarkList(n int, b *testing.B) {
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		b.Fatal(err)
+	}
 	for i := 0; i < n; i++ {
 		db.Write(&TestR{Field: "..."})
 	}
@@ -270,7 +311,10 @@ func BenchmarkRedisList1k(b *testing.B)  { benchmarkList(1000, b) }
 func BenchmarkRedisList10k(b *testing.B) { benchmarkList(10000, b) }
 
 func TestReadMultiple(t *testing.T) {
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		t.Fatal(err)
+	}
 	i := TestR{Field: "field1"}
 	db.Write(&i)
 	i2 := TestR{Field: "field1"}
@@ -288,7 +332,10 @@ func TestReadMultiple(t *testing.T) {
 }
 
 func benchmarkReadMultiple(n int, b *testing.B) {
-	db := NewStore()
+	db, err := NewStore("")
+	if err != nil {
+		b.Fatal(err)
+	}
 	items := make([]TestR, n, n)
 	for i := 0; i < n; i++ {
 		item := TestR{Field: "..."}
@@ -304,7 +351,12 @@ func benchmarkReadMultiple(n int, b *testing.B) {
 func BenchmarkReadMultiple1k(b *testing.B) { benchmarkReadMultiple(1000, b) }
 
 func flushRedisDB() {
-	pool := NewPool(NewConfig())
+	cfg, err := NewConfig("")
+	if err != nil {
+		panic(err)
+	}
+
+	pool := NewPool(cfg)
 	c := pool.Get()
 	defer c.Close()
 	if _, err := c.Do("FLUSHDB"); err != nil {

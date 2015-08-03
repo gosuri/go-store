@@ -39,7 +39,7 @@ func (h *Hacker) SetKey(k string) {
 }
 
 func main() {
-  db := redis.NewStore()
+  db := redis.NewStore("")
 
   // Save a hacker in the store with a auto-generated uuid
   db.Write(&Hacker{Name: "Alan Turing", Birthyear: 1912})

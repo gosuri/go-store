@@ -13,6 +13,8 @@ import (
 	"github.com/gosuri/go-store/store"
 )
 
+var testNs = uuid.New()
+
 type TestR struct {
 	ID         string
 	Field      string
@@ -42,7 +44,7 @@ func TestWrite(t *testing.T) {
 		FieldUint:  1,
 	}
 
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +65,7 @@ func TestWrite(t *testing.T) {
 	pool := NewPool(cfg)
 	c := pool.Get()
 	defer c.Close()
-	reply, err := driver.Values(c.Do("HGETALL", "TestR:"+s.Key()))
+	reply, err := driver.Values(c.Do("HGETALL", testNs+":TestR:"+s.Key()))
 	if err != nil {
 		t.Fatal("err", err)
 	}
@@ -80,7 +82,7 @@ func TestWrite(t *testing.T) {
 }
 
 func BenchmarkRedisWrite(b *testing.B) {
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		b.Fatal("err", err)
 	}
@@ -94,7 +96,7 @@ func TestRead(t *testing.T) {
 		ID:    uuid.New(),
 		Field: "value",
 	}
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +114,7 @@ func TestRead(t *testing.T) {
 }
 
 func TestReadNotFound(t *testing.T) {
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +129,7 @@ func TestDelete(t *testing.T) {
 		ID:    uuid.New(),
 		Field: "value",
 	}
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +158,7 @@ func TestDeleteMultiple(t *testing.T) {
 		Field: "value1",
 	}
 
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +197,7 @@ func TestPartialDeleteMultiple(t *testing.T) {
 		Field: "value2",
 	}
 
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +222,7 @@ func TestPartialDeleteMultiple(t *testing.T) {
 }
 
 func TestDeleteNotFound(t *testing.T) {
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +233,7 @@ func TestDeleteNotFound(t *testing.T) {
 }
 
 func TestDeleteNoKey(t *testing.T) {
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +244,7 @@ func TestDeleteNoKey(t *testing.T) {
 }
 
 func benchmarkRead(n int, b *testing.B) {
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -266,7 +268,7 @@ func BenchmarkRead1k(b *testing.B) { benchmarkRead(1000, b) }
 
 func TestList(t *testing.T) {
 	flushRedisDB()
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,7 +295,7 @@ func TestList(t *testing.T) {
 }
 
 func benchmarkList(n int, b *testing.B) {
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -311,7 +313,7 @@ func BenchmarkRedisList1k(b *testing.B)  { benchmarkList(1000, b) }
 func BenchmarkRedisList10k(b *testing.B) { benchmarkList(10000, b) }
 
 func TestReadMultiple(t *testing.T) {
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +334,7 @@ func TestReadMultiple(t *testing.T) {
 }
 
 func benchmarkReadMultiple(n int, b *testing.B) {
-	db, err := NewStore("")
+	db, err := NewStore("", testNs)
 	if err != nil {
 		b.Fatal(err)
 	}

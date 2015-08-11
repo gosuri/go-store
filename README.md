@@ -23,40 +23,44 @@ import (
   "github.com/gosuri/go-store/redis"
 )
 
-// Hacker implements store.Item interface methods Key and SetKey
-type Hacker struct {
+type hacker struct {
   Id        string
   Name      string
   Birthyear int
 }
 
-func (h *Hacker) Key() string {
+func (h *hacker) Key() string {
   return h.Id
 }
 
-func (h *Hacker) SetKey(k string) {
+func (h *hacker) SetKey(k string) {
   h.Id = k
 }
 
 func main() {
-  db := redis.NewStore("")
+  store, err := redis.NewStore("", "")
+  if err != nil {
+    panic(err) // handle error
+  }
 
   // Save a hacker in the store with a auto-generated uuid
-  db.Write(&Hacker{Name: "Alan Turing", Birthyear: 1912})
+  if err := store.Write(&hacker{Name: "Alan Turing", Birthyear: 1912}); err != nil {
+    panic(err) // handle error
+  }
 
-  var hackers []Hacker
+  var hackers []hacker
   // Populate hackers slice with ids of all hackers in the store
-  db.List(&hackers)
+  store.List(&hackers)
 
   alan := hackers[0]
-  db.Read(&alan)
+  store.Read(&alan)
   fmt.Println("Hello,", alan.Name)
 
   fmt.Println("Listing all", len(hackers), "hackers")
   // Fetches all hackers with names from the store
-  db.ReadMultiple(hackers)
-  for _, hacker := range hackers {
-    fmt.Printf("%s (%d) (%s)\n", hacker.Name, hacker.Birthyear, hacker.Id)
+  store.ReadMultiple(hackers)
+  for _, h := range hackers {
+    fmt.Printf("%s (%d) (%s)\n", h.Name, h.Birthyear, h.Id)
   }
 }
 ```

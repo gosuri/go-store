@@ -89,19 +89,19 @@ Running Testing
 ----------------
 
 ```
-$ go test
+$ make test
 ```
 
 Benchmarks
 ----------
 
 ```
-$ go test -bench=.
+$ make benchmark
 ...
-BenchmarkRedisWrite     10000   178342 ns/op
-BenchmarkRead           10000   119449 ns/op
-BenchmarkRead1k         10   120388644 ns/op
-BenchmarkRedisList1k    50    33211769 ns/op
-BenchmarkRedisList10k   20    79867558 ns/op
-BenchmarkReadMultiple1k 200   10372213 ns/op
+BenchmarkRedisWrite      10000  104302 ns/op
+BenchmarkRead            20000  65870 ns/op
+BenchmarkRead1k          20     67325041 ns/op
+BenchmarkRedisList1k     50     27598338 ns/op
+BenchmarkRedisList10k    30     71845057 ns/op
+BenchmarkReadMultiple1k  200    7453783 ns/op
 ```

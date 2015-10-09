@@ -56,17 +56,19 @@ type Config struct {
 }
 
 // redis implements represents the Store methods implemention for Redis.
-type redis struct {
+type Redis struct {
 	pool      *driver.Pool
 	namespace string
 }
 
-// nameInNamespace returns the item names with namespace prefixed
-func (s *redis) nameInNamespace(name string) string {
-	if len(s.namespace) != 0 {
-		return s.namespace + ":" + name
+func New(config *Config) (r *Redis, err error) {
+	if config == nil {
+		config, err = NewConfig(DefaultRedisUrl)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return name
+	return &Redis{pool: NewPool(config), namespace: config.Namespace}, nil
 }
 
 // NewStore returns an instance of Store. It parses the connection information from the connUrl provided
@@ -75,9 +77,9 @@ func (s *redis) nameInNamespace(name string) string {
 func NewStore(connUrl, namespace string) (store.Store, error) {
 	config, err := NewConfig(connUrl)
 	if err != nil {
-		return &redis{}, err
+		return &Redis{}, err
 	}
-	return &redis{pool: NewPool(config), namespace: namespace}, nil
+	return &Redis{pool: NewPool(config), namespace: namespace}, nil
 }
 
 // NewConfig returns a default redis config. It parses the connection information from the connUrl provided
@@ -153,11 +155,20 @@ func NewPool(config *Config) *driver.Pool {
 	}
 }
 
+// Pool returns a redis pool in use with the store.
+// It returns a new pool otherwise
+func (r *Redis) Pool() *driver.Pool {
+	if r.pool == nil {
+		r.pool = NewPool(nil)
+	}
+	return r.pool
+}
+
 // Read reads the item from redis store and copies the values to item
 // It Returns store.ErrKeyNotFound when no values are found for the key provided
 // and store.ErrKeyMissing when key is not provided. Unmarshalling id done using
 // driver provided redis.ScanStruct
-func (s *redis) Read(i store.Item) error {
+func (s *Redis) Read(i store.Item) error {
 	c := s.pool.Get()
 	defer c.Close()
 
@@ -183,7 +194,7 @@ func (s *redis) Read(i store.Item) error {
 }
 
 // ReadMultiple gets the values from redis in a single call by pipelining
-func (s *redis) ReadMultiple(i interface{}) error {
+func (s *Redis) ReadMultiple(i interface{}) error {
 	v := reflect.ValueOf(i)
 
 	if v.Kind() == reflect.Ptr {
@@ -242,14 +253,14 @@ func (s *redis) ReadMultiple(i interface{}) error {
 }
 
 // WriteMultiple writes multiple items i to the store.
-func (s *redis) WriteMultiple(i []store.Item) error {
+func (s *Redis) WriteMultiple(i []store.Item) error {
 	return errors.New("Implementation pending")
 }
 
 // Write writes the item to the store. It constructs the key using the i.Key()
 // and prefixes it with the type of struct. When the key is empty, it assigns
 // a unique universal id(UUID) using the SetKey method of the Item
-func (s *redis) Write(i store.Item) error {
+func (s *Redis) Write(i store.Item) error {
 	c := s.pool.Get()
 	defer c.Close()
 
@@ -286,7 +297,7 @@ func (s *redis) Write(i store.Item) error {
 // DeleteMultiple deletes multiple items i from the store. It returns the count
 // of items successfully deleted. It returns an error if any of the items do
 // not exist or can't be deleted. It will delete the other items, in that case.
-func (s *redis) DeleteMultiple(items []store.Item) (int, error) {
+func (s *Redis) DeleteMultiple(items []store.Item) (int, error) {
 	c := s.pool.Get()
 	defer c.Close()
 
@@ -312,7 +323,7 @@ func (s *redis) DeleteMultiple(items []store.Item) (int, error) {
 // Delete deletes the item from the store. It constructs the key using i.Key().
 // When the key is empty, it returns a store.ErrEmptyKey error. When the key
 // does not exist, it returns a store.ErrKeyNotFound error.
-func (s *redis) Delete(i store.Item) error {
+func (s *Redis) Delete(i store.Item) error {
 	c := s.pool.Get()
 	defer c.Close()
 
@@ -339,7 +350,7 @@ func (s *redis) Delete(i store.Item) error {
 }
 
 // List populates the slice with ids of the slice element type.
-func (s *redis) List(i interface{}) error {
+func (s *Redis) List(i interface{}) error {
 	v := reflect.ValueOf(i)
 	// Get the elements of the interface if its a pointer
 	if v.Kind() == reflect.Ptr {
@@ -417,7 +428,7 @@ func ensureSliceLen(d reflect.Value, n int) {
 }
 
 // typeName is a helper function to return the name of the type.
-func (s *redis) typeName(value reflect.Value) string {
+func (s *Redis) typeName(value reflect.Value) string {
 	if value.Kind() == reflect.Slice {
 		return s.nameInNamespace(value.Type().Elem().Name())
 	}
@@ -452,4 +463,12 @@ func marshall(item store.Item, value reflect.Value, rItem *item) error {
 		}
 	}
 	return nil
+}
+
+// nameInNamespace returns the item names with namespace prefixed
+func (s *Redis) nameInNamespace(name string) string {
+	if len(s.namespace) != 0 {
+		return s.namespace + ":" + name
+	}
+	return name
 }

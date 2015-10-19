@@ -1,3 +1,9 @@
+# 0.0.4 (Oct 18, 2015)
+
+IMPROVEMENTS:
+
+- redis: Ignoring unexported fields
+
 # 0.0.3 (Oct 8, 2015)
 
 IMPROVEMENTS:

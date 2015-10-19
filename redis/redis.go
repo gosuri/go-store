@@ -280,7 +280,7 @@ func (s *Redis) Write(i store.Item) error {
 	i.SetKey(ri.key)
 
 	// convert the item to redis item
-	if err := marshall(i, value, ri); err != nil {
+	if err := marshall(value, ri); err != nil {
 		return err
 	}
 
@@ -435,14 +435,18 @@ func (s *Redis) typeName(value reflect.Value) string {
 	return s.nameInNamespace(value.Type().Name())
 }
 
-// marshall is a helper function that copies the store.Item to redis.item and converts
+// marshall is a helper function that copies the value to redis.item and converts
 // the struct field types to driver supported types
-func marshall(item store.Item, value reflect.Value, rItem *item) error {
+func marshall(value reflect.Value, rItem *item) error {
 	// Ideally use the driver default marshalling redis.ConverAssignBytes
 	for i := 0; i < value.NumField(); i++ {
 		// key for data map
 		k := value.Type().Field(i).Name
 		field := value.Field(i)
+		// ignore unexported fields
+		if !field.CanSet() {
+			continue
+		}
 		switch field.Kind() {
 		case reflect.String:
 			rItem.data[k] = field.String()

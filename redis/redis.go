@@ -19,20 +19,16 @@ import (
 	"github.com/gosuri/go-store/store"
 )
 
-const (
-	// MaxItems specifies the max number of items to fetch form redis on each call
-	MaxItems = 1024
-)
+// MaxItems specifies the max number of items to fetch form redis on each call
+const MaxItems = 1024
 
-var (
-	// DefaultRedisURLEnv specifies the name of environment variable
-	// that contains the Redis connection url. It expects the format
-	// redis://:password@hostname:port/db_number
-	DefaultRedisURLEnv = "REDIS_URL"
+// DefaultRedisURLEnv specifies the name of environment variable
+// that contains the Redis connection url. It expects the format
+// redis://:password@hostname:port/db_number
+var DefaultRedisURLEnv = "REDIS_URL"
 
-	// Default connection url to connect to redis
-	DefaultRedisUrl = "redis://@127.0.0.1:6379"
-)
+// DefaultRedisURL connection url to connect to redis
+var DefaultRedisURL = "redis://@127.0.0.1:6379"
 
 // item represent the data structure used to store values in redis.
 type item struct {
@@ -55,15 +51,16 @@ type Config struct {
 	Namespace string
 }
 
-// redis implements represents the Store methods implemention for Redis.
+// Redis implements represents the Store methods implemention for Redis.
 type Redis struct {
 	pool      *driver.Pool
 	namespace string
 }
 
+// New returns a new Redis with defaults
 func New(config *Config) (r *Redis, err error) {
 	if config == nil {
-		config, err = NewConfig(DefaultRedisUrl)
+		config, err = NewConfig(DefaultRedisURL)
 		if err != nil {
 			return nil, err
 		}
@@ -74,8 +71,8 @@ func New(config *Config) (r *Redis, err error) {
 // NewStore returns an instance of Store. It parses the connection information from the connUrl provided
 // and expects the format redis://:password@hostname:port/db_number. If connUrl is empty it reads from
 // the environment variable DefaultRedisURLEnv or defaults to redis://127.0.0.0:6837
-func NewStore(connUrl, namespace string) (store.Store, error) {
-	config, err := NewConfig(connUrl)
+func NewStore(connURL, namespace string) (store.Store, error) {
+	config, err := NewConfig(connURL)
 	if err != nil {
 		return &Redis{}, err
 	}
@@ -85,37 +82,37 @@ func NewStore(connUrl, namespace string) (store.Store, error) {
 // NewConfig returns a default redis config. It parses the connection information from the connUrl provided
 // and expects the format redis://:password@hostname:port/db_number. If connUrl is empty it reads from
 // the environment variable DefaultRedisURLEnv or defaults to redis://127.0.0.0:6837
-func NewConfig(connUrl string) (*Config, error) {
+func NewConfig(connURL string) (*Config, error) {
 	// read from DefaultRedisURLEnv var if url is missing
 	config := &Config{}
-	if len(connUrl) == 0 {
-		connUrl = os.Getenv(DefaultRedisURLEnv)
+	if len(connURL) == 0 {
+		connURL = os.Getenv(DefaultRedisURLEnv)
 	}
 
 	// default to redis://@127.0.0.0:6837 if no environment variable is present
-	if len(connUrl) == 0 {
-		connUrl = DefaultRedisUrl
+	if len(connURL) == 0 {
+		connURL = DefaultRedisURL
 	}
 
-	rUrl, err := url.Parse(connUrl)
+	rURL, err := url.Parse(connURL)
 	if err != nil {
 		return config, err
 	}
 
 	// Parse redis host and port
-	rHost := strings.Split(rUrl.Host, ":")
+	rHost := strings.Split(rURL.Host, ":")
 	config.Host = rHost[0]
 	config.Port = rHost[1]
 
 	// Set password if exits
 
-	rPass, passOk := rUrl.User.Password()
+	rPass, passOk := rURL.User.Password()
 	if passOk {
 		config.Pass = rPass
 	}
 
 	// Set redis db number if exists
-	rDb := strings.TrimPrefix(rUrl.Path, "/")
+	rDb := strings.TrimPrefix(rURL.Path, "/")
 	if len(rDb) > 0 {
 		if config.Db, err = strconv.Atoi(rDb); err != nil {
 			return config, err
@@ -157,11 +154,11 @@ func NewPool(config *Config) *driver.Pool {
 
 // Pool returns a redis pool in use with the store.
 // It returns a new pool otherwise
-func (r *Redis) Pool() *driver.Pool {
-	if r.pool == nil {
-		r.pool = NewPool(nil)
+func (s *Redis) Pool() *driver.Pool {
+	if s.pool == nil {
+		s.pool = NewPool(nil)
 	}
-	return r.pool
+	return s.pool
 }
 
 // Read reads the item from redis store and copies the values to item

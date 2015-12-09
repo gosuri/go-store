@@ -2,21 +2,22 @@ package redis_test
 
 import (
 	"fmt"
+
 	"github.com/gosuri/go-store/redis"
 )
 
 type Hacker struct {
-	Id        string
+	ID        string
 	Name      string
 	Birthyear int
 }
 
 func (h *Hacker) Key() string {
-	return h.Id
+	return h.ID
 }
 
 func (h *Hacker) SetKey(k string) {
-	h.Id = k
+	h.ID = k
 }
 
 func Example() {
@@ -42,6 +43,6 @@ func Example() {
 	// Fetches all hackers with names from the store
 	store.ReadMultiple(hackers)
 	for _, h := range hackers {
-		fmt.Printf("%s (%d) (%s)\n", h.Name, h.Birthyear, h.Id)
+		fmt.Printf("%s (%d) (%s)\n", h.Name, h.Birthyear, h.ID)
 	}
 }

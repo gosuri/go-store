@@ -7,17 +7,17 @@ import (
 )
 
 type hacker struct {
-	Id        string
+	ID        string
 	Name      string
 	Birthyear int
 }
 
 func (h *hacker) Key() string {
-	return h.Id
+	return h.ID
 }
 
 func (h *hacker) SetKey(k string) {
-	h.Id = k
+	h.ID = k
 }
 
 func main() {
@@ -43,6 +43,6 @@ func main() {
 	// Fetches all hackers with names from the store
 	store.ReadMultiple(hackers)
 	for _, h := range hackers {
-		fmt.Printf("%s (%d) (%s)\n", h.Name, h.Birthyear, h.Id)
+		fmt.Printf("%s (%d) (%s)\n", h.Name, h.Birthyear, h.ID)
 	}
 }

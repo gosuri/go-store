@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gosuri/go-store/_vendor/src/github.com/garyburd/redigo/internal"
+	"github.com/garyburd/redigo/internal"
 )
 
 var nowFunc = time.Now // for testing

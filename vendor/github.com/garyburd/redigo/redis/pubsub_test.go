@@ -20,7 +20,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gosuri/go-store/_vendor/src/github.com/garyburd/redigo/redis"
+	"github.com/garyburd/redigo/redis"
 )
 
 func publish(channel, value interface{}) {

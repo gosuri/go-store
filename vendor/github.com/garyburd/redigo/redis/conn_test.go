@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gosuri/go-store/_vendor/src/github.com/garyburd/redigo/redis"
+	"github.com/garyburd/redigo/redis"
 )
 
 type testConn struct {

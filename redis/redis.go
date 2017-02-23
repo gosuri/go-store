@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
 	driver "github.com/garyburd/redigo/redis"
+	"github.com/google/uuid"
 	"github.com/gosuri/go-store/store"
 )
 
@@ -272,7 +272,7 @@ func (s *Redis) Write(i store.Item) error {
 	// a new UUID
 	ri.key = i.Key()
 	if len(ri.key) == 0 {
-		ri.key = uuid.New()
+		ri.key = uuid.New().String()
 	}
 	i.SetKey(ri.key)
 

@@ -8,13 +8,13 @@ import (
 	"reflect"
 	"testing"
 
-	"code.google.com/p/go-uuid/uuid"
 	driver "github.com/garyburd/redigo/redis"
+	"github.com/google/uuid"
 	"github.com/gosuri/go-store/store"
 )
 
 var (
-	testNs       = uuid.New()
+	testNs       = uuid.New().String()
 	testRedisURL = "redis://@127.0.0.1:6379/2"
 )
 
@@ -41,7 +41,7 @@ func (s *TestR) SetKey(k string) {
 
 func TestWrite(t *testing.T) {
 	s := &TestR{
-		ID:         uuid.New(),
+		ID:         uuid.New().String(),
 		Field:      "value",
 		FieldInt:   10,
 		FieldFloat: 1.234,
@@ -92,7 +92,7 @@ func BenchmarkRedisWrite(b *testing.B) {
 
 func TestRead(t *testing.T) {
 	s := &TestR{
-		ID:    uuid.New(),
+		ID:    uuid.New().String(),
 		Field: "value",
 	}
 	db := testStore(t)
@@ -119,7 +119,7 @@ func TestReadNotFound(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	s := &TestR{
-		ID:    uuid.New(),
+		ID:    uuid.New().String(),
 		Field: "value",
 	}
 	db := testStore(t)
@@ -139,12 +139,12 @@ func TestDelete(t *testing.T) {
 
 func TestDeleteMultiple(t *testing.T) {
 	s := &TestR{
-		ID:    uuid.New(),
+		ID:    uuid.New().String(),
 		Field: "value",
 	}
 
 	s1 := &TestR{
-		ID:    uuid.New(),
+		ID:    uuid.New().String(),
 		Field: "value1",
 	}
 
@@ -171,17 +171,17 @@ func TestDeleteMultiple(t *testing.T) {
 func TestPartialDeleteMultiple(t *testing.T) {
 	db := testStore(t)
 	s := &TestR{
-		ID:    uuid.New(),
+		ID:    uuid.New().String(),
 		Field: "value",
 	}
 
 	s1 := &TestR{
-		ID:    uuid.New(),
+		ID:    uuid.New().String(),
 		Field: "value1",
 	}
 
 	s2 := &TestR{
-		ID:    uuid.New(),
+		ID:    uuid.New().String(),
 		Field: "value2",
 	}
 
